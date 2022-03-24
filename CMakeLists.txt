@@ -23,6 +23,8 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES  
   Holistic.msg
+  Keypoint.msg
+  Hand.msg
   #Message2.msg
 )
 

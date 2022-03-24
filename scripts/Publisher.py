@@ -6,7 +6,7 @@ import mediapipe as mp
 import cv2
 import csv
 import numpy as np
-from sk_tracking.msg import Holistic
+from mediapipe_gesture_recognition.msg import Holistic, Hand
 import rospy
 import numpy as np
 
@@ -15,6 +15,10 @@ E_D_Webcam = rospy.get_param("/webcam")
 E_D_Right_Hand = rospy.get_param("/enable_right_hand")
 E_D_Left_Hand = rospy.get_param("/enable_left_hand")
 E_D_Pose = rospy.get_param("/enable_pose")
+
+var = Hand()
+Hand.right_or_left = 1
+
 
 
 def talker():
