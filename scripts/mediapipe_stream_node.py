@@ -3,30 +3,17 @@
 import rospy
 import mediapipe as mp
 from mediapipe_gesture_recognition.msg import Hand, Skeleton, Face, Keypoint
-<<<<<<< HEAD
 import cv2
-=======
->>>>>>> 55a80c3de579447777b0f20764decba37918c85b
 
 rospy.init_node('mediapipe_stream_node', anonymous=True)
 rate = rospy.Rate(100) # 100hz 
 
-<<<<<<< HEAD
- 
-hand_right_pub = rospy.Publisher('/mediapipe/hand_right', Hand, queue_size=1)
-hand_left_pub = rospy.Publisher('/mediapipe/hand_left', Hand, queue_size=1)
-skeleton_pub = rospy.Publisher('/mediapipe/skeleton', Skeleton, queue_size=1)
-face_pub = rospy.Publisher('/mediapipe/face', Face, queue_size=1)
 
-var = Hand()
-Hand.right_or_left = 1
-=======
 # Mediapipe Publishers
 hand_right_pub  = rospy.Publisher('/mediapipe/hand_right', Hand, queue_size=1)
 hand_left_pub   = rospy.Publisher('/mediapipe/hand_left', Hand, queue_size=1)
 skeleton_pub    = rospy.Publisher('/mediapipe/skeleton', Skeleton, queue_size=1)
 face_pub        = rospy.Publisher('/mediapipe/face', Face, queue_size=1)
->>>>>>> 55a80c3de579447777b0f20764decba37918c85b
 
 # Mediapipe Messages
 hand_right_msg = Hand()
@@ -34,13 +21,6 @@ hand_left_msg = Hand()
 skeleton_msg = Skeleton()
 face_msg = Face()
 
-<<<<<<< HEAD
-# initialization
-right_hand = False
-left_hand = False
-skeleton = False
-face = False
-=======
 # Read Webcam Parameters
 webcam = rospy.get_param('webcam', 0)
 
@@ -50,7 +30,7 @@ enable_right_hand = rospy.get_param('enable_right_hand', False)
 enable_left_hand = rospy.get_param('enable_left_hand', False)
 enable_pose = rospy.get_param('enable_pose', False)
 enable_face = rospy.get_param('enable_face', False)
->>>>>>> 55a80c3de579447777b0f20764decba37918c85b
+
 
 while not rospy.is_shutdown():
 
@@ -127,6 +107,7 @@ while not rospy.is_shutdown():
             face_pub(face_msg) 
     
 # Run mediapipe detection
+
 
 # For webcam input:
 mp_drawing = mp.solutions.drawing_utils
