@@ -3,5 +3,5 @@ float64 y
 float64 z
 float64 v
 
-int keypoint_number
+int32 keypoint_number
 string keypoint_name

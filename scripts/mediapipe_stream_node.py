@@ -4,10 +4,8 @@ import rospy
 import mediapipe as mp
 from mediapipe_gesture_recognition.msg import Hand, Skeleton, Face, Keypoint
 
-
 rospy.init_node('mediapipe_stream_node', anonymous=True)
 rate = rospy.Rate(100) # 100hz 
-
  
 hand_right_pub = rospy.Publisher('/mediapipe/hand_right', Hand, queue_size=1)
 hand_left_pub = rospy.Publisher('/mediapipe/hand_left', Hand, queue_size=1)

@@ -65,7 +65,7 @@ generate_messages(
 
 catkin_package(
   INCLUDE_DIRS
-    include
+    # include
   CATKIN_DEPENDS
     roscpp
     rospy

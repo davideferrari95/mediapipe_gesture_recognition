@@ -1,0 +1,26 @@
+<launch>
+
+    <!-- Webcam Args -->
+    <arg name="webcam" default="0"/>
+
+    <!-- Enable Mediapipe Modules Args -->
+    <arg name="enable_holistic"     default="true"/>
+    <arg name="enable_right_hand"   default="false"/>
+    <arg name="enable_left_hand"    default="false"/>
+    <arg name="enable_pose"         default="false"/>
+    <arg name="enable_face"         default="false"/>
+
+    <!-- Webcam Parameters -->
+    <param name="webcam" value="$(arg webcam)"/>
+
+    <!-- Enable Mediapipe Modules Parameters -->
+    <param name="enable_holistic"   value="$(arg enable_holistic)"/>
+    <param name="enable_right_hand" value="$(arg enable_right_hand)"/>
+    <param name="enable_left_hand"  value="$(arg enable_left_hand)"/>
+    <param name="enable_pose"       value="$(arg enable_pose)"/>
+    <param name="enable_face"       value="$(arg enable_face)"/>
+
+    <!-- Mediapipe Stream Node -->
+    <node pkg="mediapipe_gesture_recognition" type="mediapipe_stream_node.py" name="mediapipe_stream_node" output="screen"/>
+
+</launch>
