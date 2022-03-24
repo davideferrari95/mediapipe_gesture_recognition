@@ -21,11 +21,11 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## Generate messages in the 'msg' folder
 add_message_files(
-  FILES  
-  Holistic.msg
+  FILES
+  Skeleton.msg  
   Keypoint.msg
   Hand.msg
-  #Message2.msg
+  Face.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -46,6 +46,7 @@ add_message_files(
 generate_messages(
   DEPENDENCIES
     std_msgs
+    ${PROJECT_NAME}
 )
 
 ################################################
@@ -64,7 +65,7 @@ generate_messages(
 
 catkin_package(
   INCLUDE_DIRS
-    include
+    # include
   CATKIN_DEPENDS
     roscpp
     rospy
@@ -79,7 +80,7 @@ catkin_package(
 ###########
 
 include_directories(
-  include
+  # include
   ${catkin_INCLUDE_DIRS}
 )
 
@@ -97,7 +98,7 @@ include_directories(
 ## Install ##
 #############
 
-# install(PROGRAMS 
-#   src/${PROJECT_NAME}.py
-#   DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}
-# )
+install(PROGRAMS 
+  scripts/mediapipe_stream_node.py
+  DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}
+)

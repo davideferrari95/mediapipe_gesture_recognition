@@ -1,6 +1,5 @@
-int RIGHT = 1
-int LEFT = 2
+int8 RIGHT = 1
+int8 LEFT = 2
 
-int right_or_left
+int8 right_or_left
 mediapipe_gesture_recognition/Keypoint[] keypoints
-
