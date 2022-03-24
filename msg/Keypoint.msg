@@ -4,4 +4,5 @@ float64 z
 float64 v
 
 int keypoint_number
+string keypoint_name
 
