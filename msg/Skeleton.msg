@@ -1,0 +1,1 @@
+mediapipe_gesture_recognition/Keypoint[] keypoints
