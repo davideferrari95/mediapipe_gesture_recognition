@@ -22,7 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  Skeleton.msg  
+  Pose.msg  
   Keypoint.msg
   Hand.msg
   Face.msg

@@ -2,7 +2,7 @@
 
 import rospy
 import mediapipe as mp
-from mediapipe_gesture_recognition.msg import Hand, Skeleton, Face, Keypoint
+from mediapipe_gesture_recognition.msg import Hand, Pose, Face, Keypoint
 import cv2
 
 rospy.init_node('mediapipe_stream_node', anonymous=True)
@@ -12,13 +12,13 @@ rate = rospy.Rate(100) # 100hz
 # Mediapipe Publishers
 hand_right_pub  = rospy.Publisher('/mediapipe/hand_right', Hand, queue_size=1)
 hand_left_pub   = rospy.Publisher('/mediapipe/hand_left', Hand, queue_size=1)
-skeleton_pub    = rospy.Publisher('/mediapipe/skeleton', Skeleton, queue_size=1)
+pose_pub        = rospy.Publisher('/mediapipe/pose', Pose, queue_size=1)
 face_pub        = rospy.Publisher('/mediapipe/face', Face, queue_size=1)
 
 # Mediapipe Messages
 hand_right_msg = Hand()
 hand_left_msg = Hand()
-skeleton_msg = Skeleton()
+pose_msg = Pose()
 face_msg = Face()
 
 # Read Webcam Parameters
@@ -54,7 +54,7 @@ while not rospy.is_shutdown():
 
         hand_right_pub(hand_right_msg)
 
-    elif left_hand:
+    elif enable_left_hand:
 
             # Run mediapipe right_hand detection
 
@@ -74,7 +74,7 @@ while not rospy.is_shutdown():
 
             hand_left_pub(hand_left_msg)
 
-    elif skeleton:
+    elif enable_pose:
 
             for i in range(6):
                 # Read keypoint
@@ -86,11 +86,11 @@ while not rospy.is_shutdown():
                 new_keypoint.keypoint_number
                 new_keypoint.keypoint_name
                 # Append keypoint
-                skeleton_msg.keypoints.append(new_keypoint)
+                pose_msg.keypoints.append(new_keypoint)
 
-            skeleton_pub(skeleton_msg)
+            pose_pub(pose_msg)
 
-    elif face:
+    elif enable_face:
 
             for i in range(6):
                 # Read keypoint
@@ -106,8 +106,10 @@ while not rospy.is_shutdown():
 
             face_pub(face_msg) 
     
-# Run mediapipe detection
+    # Run mediapipe detection
 
+    # Sleep for the Remaining Cycle Time
+    rate.sleep()
 
 # For webcam input:
 mp_drawing = mp.solutions.drawing_utils
@@ -174,5 +176,3 @@ cap.release()
 # add keypoint to each message ordered
 # publish each message
 
-    # Sleep for the Remaining Cycle Time
-    rate.sleep()
