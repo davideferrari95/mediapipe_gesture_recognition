@@ -47,6 +47,7 @@ mp_face_detection = mp.solutions.face_detection
 
 cap = cv2.VideoCapture(webcam)
 
+
 # While loop mediapipe code that need to be run each cycle
 #while not rospy.is_shutdown():
 
@@ -63,127 +64,128 @@ with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.5, min_tracki
     image.flags.writeable = False
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    #if enable_right_hand:
-    hand_results = hands.process(image)
-    pose_results = pose.process(image)
-    face_results = face_detection.process(image)
 
-    # Draw the hand annotations on the image.
-    image.flags.writeable = True
-    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    if enable_right_hand or enable_left_hand:
+      hand_results = hands.process(image)
 
-    if hand_results.multi_hand_landmarks:
-      for hand_landmarks in hand_results.multi_hand_landmarks:
-        mp_drawing.draw_landmarks(
-            image,
-            hand_landmarks,
-            mp_hands.HAND_CONNECTIONS,
-            mp_drawing_styles.get_default_hand_landmarks_style(),
-            mp_drawing_styles.get_default_hand_connections_style())
+      # Draw the hand annotations on the image.
+      image.flags.writeable = True
+      image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-    # Draw the pose annotation on the image.
-    image.flags.writeable = True
-    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    mp_drawing.draw_landmarks(
-        image,
-        pose_results.pose_landmarks,
-        mp_pose.POSE_CONNECTIONS,
-        landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style())
-
-    # Draw the face detection annotations on the image.
-    image.flags.writeable = True
-    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    if face_results.detections:
-      for detection in face_results.detections:
-        mp_drawing.draw_detection(image, detection)
-
-    # Flip the image horizontally for a selfie-view display.
-    cv2.imshow('MediaPipe Hands', cv2.flip(image, 1))
-    cv2.imshow('MediaPipe Pose', cv2.flip(image, 1))
-    cv2.imshow('MediaPipe Face Detection', cv2.flip(image, 1))
-    if cv2.waitKey(5) & 0xFF == 27:
-      break
-cap.release()
-
-# add keypoint to each message ordered
-
-if hand_results.right_hand_landmarks:
-  hand_right_msg.right_or_left = hand_right_msg.RIGHT
-
-  # Run mediapipe right_hand detection (before and obtain the landmarks)
-  for i in range(len(hand_results.right_hand_landmarks.landmark)):
-
-    """
-    landmark {
-      x: 0.414364755153656
-      y: 0.2742988169193268
-      z: -0.5210666060447693
-      visibility: 0.9999992847442627
-    }
-    landmark {
-      x: 0.4284072518348694
-      y: 0.2577638030052185
-      z: -0.49063441157341003
-      visibility: 0.9999985694885254
-    } 
-    """
+      if hand_results.multi_hand_landmarks:
+        for hand_landmarks in hand_results.multi_hand_landmarks:
+          mp_drawing.draw_landmarks(
+              image,
+              hand_landmarks,
+              mp_hands.HAND_CONNECTIONS,
+              mp_drawing_styles.get_default_hand_landmarks_style(),
+              mp_drawing_styles.get_default_hand_connections_style())
     
-    # Read keypoint
-    new_keypoint = Keypoint()
-    new_keypoint.x = hand_results.right_hand_landmarks.landmark[i].x
-    new_keypoint.y = hand_results.right_hand_landmarks.landmark[i].y
-    new_keypoint.z = hand_results.right_hand_landmarks.landmark[i].z
-    new_keypoint.v = hand_results.right_hand_landmarks.landmark[i].visibility
+      #add right_hand keypoint to ordered message
+      if hand_results.right_hand_landmarks:
+        hand_right_msg.right_or_left = hand_right_msg.RIGHT
 
-    new_keypoint.keypoint_number = i
-    new_keypoint.keypoint_name = hand_landmarks_names[i]
+        # Run mediapipe right_hand detection (before and obtain the landmarks)
+        for i in range(len(hand_results.right_hand_landmarks.landmark)):
+        
+          """
+          landmark {
+            x: 0.414364755153656
+            y: 0.2742988169193268
+            z: -0.5210666060447693
+            visibility: 0.9999992847442627
+          }
+          landmark {
+            x: 0.4284072518348694
+            y: 0.2577638030052185
+            z: -0.49063441157341003
+            visibility: 0.9999985694885254
+          } 
+          """
 
-    # Append keypoint
-    hand_right_msg.keypoints.append(new_keypoint)
+          # Read keypoint
+          new_keypoint = Keypoint()
+          new_keypoint.x = hand_results.right_hand_landmarks.landmark[i].x
+          new_keypoint.y = hand_results.right_hand_landmarks.landmark[i].y
+          new_keypoint.z = hand_results.right_hand_landmarks.landmark[i].z
+          new_keypoint.v = hand_results.right_hand_landmarks.landmark[i].visibility
 
-  hand_right_pub.publish(hand_right_msg)
+          new_keypoint.keypoint_number = i
+          new_keypoint.keypoint_name = hand_landmarks_names[i]
+
+          # Append keypoint
+          hand_right_msg.keypoints.append(new_keypoint)
+
+        hand_right_pub.publish(hand_right_msg)
 
 
-elif hand_results.left_hand_landmarks:
-  hand_left_msg.right_or_left = hand_left_msg.LEFT
+      #add left_hand keypoint to ordered message
+      elif hand_results.left_hand_landmarks:
+        hand_left_msg.right_or_left = hand_left_msg.LEFT
 
-  # Run mediapipe left_hand detection
-  for i in range(len(hand_results.left_hand_landmarks.landmark)):
+        # Run mediapipe left_hand detection
+        for i in range(len(hand_results.left_hand_landmarks.landmark)):
+        
+          # Read keypoint
+          new_keypoint = Keypoint()
+          new_keypoint.x = hand_results.left_hand_landmarks.landmark[i].x
+          new_keypoint.y = hand_results.left_hand_landmarks.landmark[i].y
+          new_keypoint.z = hand_results.left_hand_landmarks.landmark[i].z
+          new_keypoint.v = hand_results.left_hand_landmarks.landmark[i].visibility
 
-    # Read keypoint
-    new_keypoint = Keypoint()
-    new_keypoint.x = hand_results.left_hand_landmarks.landmark[i].x
-    new_keypoint.y = hand_results.left_hand_landmarks.landmark[i].y
-    new_keypoint.z = hand_results.left_hand_landmarks.landmark[i].z
-    new_keypoint.v = hand_results.left_hand_landmarks.landmark[i].visibility
+          new_keypoint.keypoint_number = i
+          new_keypoint.keypoint_name = hand_landmarks_names[i]
 
-    new_keypoint.keypoint_number = i
-    new_keypoint.keypoint_name = hand_landmarks_names[i]
+          # Append keypoint
+          hand_left_msg.keypoints.append(new_keypoint)
 
-    # Append keypoint
-    hand_left_msg.keypoints.append(new_keypoint)
+        hand_left_pub.publish(hand_left_msg)
 
-  hand_left_pub.publish(hand_left_msg)
 
-elif enable_pose:
+    if enable_pose:
+      pose_results = pose.process(image)
 
-  for i in range(6):
-    # Read keypoint
-    new_keypoint = Keypoint()
-    new_keypoint.x = pose_results.pose_landmarks.landmark[i].x
-    new_keypoint.y = pose_results.pose_landmarks.landmark[i].y
-    new_keypoint.z = pose_results.pose_landmarks.landmark[i].z
-    new_keypoint.v = pose_results.pose_landmarks.landmark[i].visibility
+      # Draw the pose annotation on the image.
+      image.flags.writeable = True
+      image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+      mp_drawing.draw_landmarks(
+          image,
+          pose_results.pose_landmarks,
+          mp_pose.POSE_CONNECTIONS,
+          landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style())    
+    
+      #add pose keypoint to ordered message      
+      if enable_pose:#################################
+      
+        for i in range(6):
+          # Read keypoint
+          new_keypoint = Keypoint()
+          new_keypoint.x = pose_results.pose_landmarks.landmark[i].x
+          new_keypoint.y = pose_results.pose_landmarks.landmark[i].y
+          new_keypoint.z = pose_results.pose_landmarks.landmark[i].z
+          new_keypoint.v = pose_results.pose_landmarks.landmark[i].visibility
 
-    new_keypoint.keypoint_number = i
-    new_keypoint.keypoint_name = pose_landmarks_names[i]
+          new_keypoint.keypoint_number = i
+          new_keypoint.keypoint_name = pose_landmarks_names[i]
 
-    # Append keypoint
-    pose_msg.keypoints.append(new_keypoint)
+          # Append keypoint
+          pose_msg.keypoints.append(new_keypoint)
 
-  pose_pub.publish(pose_msg)
+        pose_pub.publish(pose_msg)    
+    
+    
+    if enable_face:
+      face_results = face_detection.process(image)
 
-elif enable_face:
+      # Draw the face detection annotations on the image.
+      image.flags.writeable = True
+      image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+      if face_results.detections:
+        for detection in face_results.detections:
+          mp_drawing.draw_detection(image, detection)
+
+      #add face keypoint to ordered message
+      if enable_face:#######################################
 
         for i in range(6):
             # Read keypoint
@@ -199,6 +201,16 @@ elif enable_face:
 
         face_pub.publish(face_msg) 
     
+
+    # Flip the image horizontally for a selfie-view display.
+    cv2.imshow('MediaPipe Hands', cv2.flip(image, 1))
+    cv2.imshow('MediaPipe Pose', cv2.flip(image, 1))
+    cv2.imshow('MediaPipe Face Detection', cv2.flip(image, 1))
+    if cv2.waitKey(5) & 0xFF == 27:
+      break
+cap.release()
+
+
 # Run mediapipe detection
 
 
