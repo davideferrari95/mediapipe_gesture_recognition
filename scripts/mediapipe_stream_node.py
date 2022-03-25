@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from mediapipe_gesture_recognition.scripts.Publisher import E_D_Webcam
 import rospy
 import mediapipe as mp
 from mediapipe_gesture_recognition.msg import Hand, Pose, Face, Keypoint
@@ -52,7 +53,7 @@ while not rospy.is_shutdown():
             # Append keypoint
             hand_right_msg.keypoints.append(new_keypoint)
 
-        hand_right_pub(hand_right_msg)
+        hand_right_pub.publish(hand_right_msg)
 
     elif enable_left_hand:
 
@@ -72,7 +73,7 @@ while not rospy.is_shutdown():
                 # Append keypoint
                 hand_left_msg.keypoints.append(new_keypoint)
 
-            hand_left_pub(hand_left_msg)
+            hand_left_pub.publish(hand_left_msg)
 
     elif enable_pose:
 
@@ -88,7 +89,7 @@ while not rospy.is_shutdown():
                 # Append keypoint
                 pose_msg.keypoints.append(new_keypoint)
 
-            pose_pub(pose_msg)
+            pose_pub.publish(pose_msg)
 
     elif enable_face:
 
@@ -104,7 +105,7 @@ while not rospy.is_shutdown():
                 # Append keypoint
                 face_msg.keypoints.append(new_keypoint)
 
-            face_pub(face_msg) 
+            face_pub.publish(face_msg) 
     
     # Run mediapipe detection
 
@@ -118,7 +119,7 @@ mp_hands = mp.solutions.hands
 mp_pose = mp.solutions.pose
 mp_face_detection = mp.solutions.face_detection
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(webcam)
 
 with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.5, min_tracking_confidence=0.5) as hands, mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose, mp_face_detection.FaceDetection(model_selection=0, min_detection_confidence=0.5) as face_detection:
   while cap.isOpened():
@@ -174,5 +175,8 @@ with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.5, min_tracki
 cap.release()
 
 # add keypoint to each message ordered
+
+
+
 # publish each message
 
