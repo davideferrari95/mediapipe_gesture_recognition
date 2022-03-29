@@ -212,7 +212,7 @@ while not rospy.is_shutdown():
                     .get_default_face_mesh_iris_connections_style())
 
         #add face keypoint to ordered message
-        for i in range(len(face_results.multi_face_landmarks.landmarks[i])): # BUG : TypeError: object of type 'NoneType' has no len()
+        for i in range(len(face_results.multi_face_landmarks.landmarks)): # BUG : TypeError: object of type 'NoneType' has no len()
           """
           landmark {
             x: 0.6572769284248352
