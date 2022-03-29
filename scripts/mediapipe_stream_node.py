@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-from mediapipe_gesture_recognition.scripts.mediapipe_stream_node import webcam
 import rospy
-import mediapipe as mp
-from mediapipe_gesture_recognition.msg import Hand, Pose, Face, Keypoint
 import cv2
+import mediapipe as mp
+from mediapipe_gesture_recognition.scripts.mediapipe_stream_node import webcam
+from mediapipe_gesture_recognition.msg import Hand, Pose, Face, Keypoint
 
 rospy.init_node('mediapipe_stream_node', anonymous=True)
 rate = rospy.Rate(100) # 100hz 
@@ -45,6 +45,7 @@ mp_hands = mp.solutions.hands
 mp_pose = mp.solutions.pose
 mp_face_mesh = mp.solutions.face_mesh
 
+# Video Webcam
 cap = cv2.VideoCapture(webcam)
 
 
@@ -59,8 +60,7 @@ while not rospy.is_shutdown():
         # If loading a video, use 'break' instead of 'continue'.
         continue
 
-      # To improve performance, optionally mark the image as not writeable to
-      # pass by reference.
+      # To improve performance, optionally mark the image as not writeable to pass by reference.
       image.flags.writeable = False
       image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
@@ -120,6 +120,7 @@ while not rospy.is_shutdown():
 
 
         #add left_hand keypoint to ordered message
+        # FIXME: if I have both left and right hand this elif statement is ignored
         elif hand_results.left_hand_landmarks:
           hand_left_msg.right_or_left = hand_left_msg.LEFT
 
@@ -235,8 +236,10 @@ while not rospy.is_shutdown():
           new_keypoint.z = face_results.multi_face_landmarks.face_landmark[i].z
           # new_keypoint.v = pose_results.face_landmarks.landmark[i].visibility
           new_keypoint.keypoint_number = i
-          new_keypoint.keypoint_name ############################################################ 468 Landmarks so we can't make a list like the hands or the pose
 
+          # BUG: 468 Landmarks so we can't make a list like the hands or the pose
+          # I agree, we can set our custom names as FACE_KEYPOINT_1 ...
+          new_keypoint.keypoint_name = f'FACE_KEYPOINT_{i}'
           # Append keypoint
           face_msg.keypoints.append(new_keypoint)
 
