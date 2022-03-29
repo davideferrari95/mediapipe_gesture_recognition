@@ -43,7 +43,7 @@ mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
 mp_pose = mp.solutions.pose
-mp_face_detection = mp.solutions.face_detection
+mp_face_mesh = mp.solutions.face_mesh
 
 cap = cv2.VideoCapture(webcam)
 
@@ -51,7 +51,7 @@ cap = cv2.VideoCapture(webcam)
 # While loop mediapipe code that need to be run each cycle
 #while not rospy.is_shutdown():
 
-with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.5, min_tracking_confidence=0.5) as hands, mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose, mp_face_detection.FaceDetection(model_selection=0, min_detection_confidence=0.5) as face_detection:
+with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.5, min_tracking_confidence=0.5) as hands, mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose, mp_face_mesh.FaceMesh(max_num_faces=1, refine_landmarks=True, min_detection_confidence=0.5, min_tracking_confidence=0.5) as face_mesh:
   while cap.isOpened():
     success, image = cap.read()
     if not success:
@@ -155,51 +155,65 @@ with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.5, min_tracki
           landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style())    
     
       #add pose keypoint to ordered message      
-      if enable_pose:#################################
-      
-        for i in range(6):
-          # Read keypoint
-          new_keypoint = Keypoint()
-          new_keypoint.x = pose_results.pose_landmarks.landmark[i].x
-          new_keypoint.y = pose_results.pose_landmarks.landmark[i].y
-          new_keypoint.z = pose_results.pose_landmarks.landmark[i].z
-          new_keypoint.v = pose_results.pose_landmarks.landmark[i].visibility
+      for i in range(len(hand_results.pose_landmarks.landmark)):
+        # Read keypoint
+        new_keypoint = Keypoint()
+        new_keypoint.x = pose_results.pose_landmarks.landmark[i].x
+        new_keypoint.y = pose_results.pose_landmarks.landmark[i].y
+        new_keypoint.z = pose_results.pose_landmarks.landmark[i].z
+        new_keypoint.v = pose_results.pose_landmarks.landmark[i].visibility
+        new_keypoint.keypoint_number = i
+        new_keypoint.keypoint_name = pose_landmarks_names[i]
+        # Append keypoint
+        pose_msg.keypoints.append(new_keypoint)
 
-          new_keypoint.keypoint_number = i
-          new_keypoint.keypoint_name = pose_landmarks_names[i]
-
-          # Append keypoint
-          pose_msg.keypoints.append(new_keypoint)
-
-        pose_pub.publish(pose_msg)    
+      pose_pub.publish(pose_msg)    
     
     
     if enable_face:
-      face_results = face_detection.process(image)
+      face_results = face_mesh.process(image)
 
       # Draw the face detection annotations on the image.
       image.flags.writeable = True
       image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-      if face_results.detections:
-        for detection in face_results.detections:
-          mp_drawing.draw_detection(image, detection)
+      if face_results.multi_face_landmarks:
+            for face_landmarks in face_results.multi_face_landmarks:
+              mp_drawing.draw_landmarks(
+                  image=image,
+                  landmark_list=face_landmarks,
+                  connections=mp_face_mesh.FACEMESH_TESSELATION,
+                  landmark_drawing_spec=None,
+                  connection_drawing_spec=mp_drawing_styles
+                  .get_default_face_mesh_tesselation_style())
+              mp_drawing.draw_landmarks(
+                  image=image,
+                  landmark_list=face_landmarks,
+                  connections=mp_face_mesh.FACEMESH_CONTOURS,
+                  landmark_drawing_spec=None,
+                  connection_drawing_spec=mp_drawing_styles
+                  .get_default_face_mesh_contours_style())
+              mp_drawing.draw_landmarks(
+                  image=image,
+                  landmark_list=face_landmarks,
+                  connections=mp_face_mesh.FACEMESH_IRISES,
+                  landmark_drawing_spec=None,
+                  connection_drawing_spec=mp_drawing_styles
+                  .get_default_face_mesh_iris_connections_style())
 
       #add face keypoint to ordered message
-      if enable_face:#######################################
+      for i in range(len(face_results.multi_face_landmarks.face_landmark)):
+          # Read keypoint
+          new_keypoint = Keypoint()
+          new_keypoint.x = face_results.multi_face_landmarks.face_landmark[i].x
+          new_keypoint.y = face_results.multi_face_landmarks.face_landmark[i].y
+          new_keypoint.z = face_results.multi_face_landmarks.face_landmark[i].z
+          # new_keypoint.v = pose_results.face_landmarks.landmark[i].visibility
+          new_keypoint.keypoint_number = i
+          new_keypoint.keypoint_name ############################################################ 468 Landmarks so we can't make a list like the hands or the pose
+          # Append keypoint
+          face_msg.keypoints.append(new_keypoint)
 
-        for i in range(6):
-            # Read keypoint
-            new_keypoint = Keypoint()
-            new_keypoint.x = ...
-            new_keypoint.y = ...
-            new_keypoint.z = ...
-            new_keypoint.v = ...
-            new_keypoint.keypoint_number
-            new_keypoint.keypoint_name
-            # Append keypoint
-            face_msg.keypoints.append(new_keypoint)
-
-        face_pub.publish(face_msg) 
+      face_pub.publish(face_msg) 
     
 
     # Flip the image horizontally for a selfie-view display.
