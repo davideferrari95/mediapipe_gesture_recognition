@@ -190,6 +190,7 @@ with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.5, min_tracki
       image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
       if face_results.multi_face_landmarks:
             for face_landmarks in face_results.multi_face_landmarks:
+              
               mp_drawing.draw_landmarks(
                   image=image,
                   landmark_list=face_landmarks,
@@ -197,6 +198,7 @@ with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.5, min_tracki
                   landmark_drawing_spec=None,
                   connection_drawing_spec=mp_drawing_styles
                   .get_default_face_mesh_tesselation_style())
+              
               mp_drawing.draw_landmarks(
                   image=image,
                   landmark_list=face_landmarks,
@@ -204,6 +206,7 @@ with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.5, min_tracki
                   landmark_drawing_spec=None,
                   connection_drawing_spec=mp_drawing_styles
                   .get_default_face_mesh_contours_style())
+              
               mp_drawing.draw_landmarks(
                   image=image,
                   landmark_list=face_landmarks,
@@ -235,7 +238,7 @@ with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.5, min_tracki
         new_keypoint.z = face_results.multi_face_landmarks.face_landmark[i].z
         # new_keypoint.v = pose_results.face_landmarks.landmark[i].visibility
         new_keypoint.keypoint_number = i
-        new_keypoint.keypoint_name ############################################################ 468 Landmarks so we can't make a list like the hands or the pose
+        new_keypoint.keypoint_name # 468 Landmarks so we can't make a list like the hands or the pose
         
         # Append keypoint
         face_msg.keypoints.append(new_keypoint)
