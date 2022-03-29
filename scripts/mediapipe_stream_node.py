@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from mediapipe_gesture_recognition.scripts.Publisher import E_D_Webcam
+from mediapipe_gesture_recognition.scripts.mediapipe_stream_node import webcam
 import rospy
 import mediapipe as mp
 from mediapipe_gesture_recognition.msg import Hand, Pose, Face, Keypoint
@@ -156,6 +156,18 @@ with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.5, min_tracki
     
       #add pose keypoint to ordered message      
       for i in range(len(hand_results.pose_landmarks.landmark)):
+
+        """
+        x: 0.6068623065948486
+        y: 0.6184841394424438
+        z: -0.22558169066905975
+        visibility: 0.9960732460021973
+        , x: -0.21233102679252625
+        y: 0.6388503909111023
+        z: 0.1573469489812851
+        visibility: 0.9742392301559448
+        """
+
         # Read keypoint
         new_keypoint = Keypoint()
         new_keypoint.x = pose_results.pose_landmarks.landmark[i].x
@@ -202,16 +214,31 @@ with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.5, min_tracki
 
       #add face keypoint to ordered message
       for i in range(len(face_results.multi_face_landmarks.face_landmark)):
-          # Read keypoint
-          new_keypoint = Keypoint()
-          new_keypoint.x = face_results.multi_face_landmarks.face_landmark[i].x
-          new_keypoint.y = face_results.multi_face_landmarks.face_landmark[i].y
-          new_keypoint.z = face_results.multi_face_landmarks.face_landmark[i].z
-          # new_keypoint.v = pose_results.face_landmarks.landmark[i].visibility
-          new_keypoint.keypoint_number = i
-          new_keypoint.keypoint_name ############################################################ 468 Landmarks so we can't make a list like the hands or the pose
-          # Append keypoint
-          face_msg.keypoints.append(new_keypoint)
+
+        """
+        landmark {
+          x: 0.6572769284248352
+          y: 0.44084274768829346
+          z: -0.02765425108373165
+        }
+        landmark {
+          x: 0.6293548941612244
+          y: 0.4240654706954956
+          z: -0.02765425108373165
+        }
+        """
+
+        # Read keypoint
+        new_keypoint = Keypoint()
+        new_keypoint.x = face_results.multi_face_landmarks.face_landmark[i].x
+        new_keypoint.y = face_results.multi_face_landmarks.face_landmark[i].y
+        new_keypoint.z = face_results.multi_face_landmarks.face_landmark[i].z
+        # new_keypoint.v = pose_results.face_landmarks.landmark[i].visibility
+        new_keypoint.keypoint_number = i
+        new_keypoint.keypoint_name ############################################################ 468 Landmarks so we can't make a list like the hands or the pose
+        
+        # Append keypoint
+        face_msg.keypoints.append(new_keypoint)
 
       face_pub.publish(face_msg) 
     
@@ -223,7 +250,6 @@ with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.5, min_tracki
     if cv2.waitKey(5) & 0xFF == 27:
       break
 cap.release()
-
 
 # Run mediapipe detection
 
