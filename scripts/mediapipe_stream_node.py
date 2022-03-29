@@ -3,7 +3,6 @@
 import rospy
 import cv2
 import mediapipe as mp
-from mediapipe_gesture_recognition.scripts.mediapipe_stream_node import webcam
 from mediapipe_gesture_recognition.msg import Hand, Pose, Face, Keypoint
 
 rospy.init_node('mediapipe_stream_node', anonymous=True)
@@ -72,6 +71,7 @@ while not rospy.is_shutdown():
         image.flags.writeable = True
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
+        # BUG : The two hands landmarks are not dissociated
         if hand_results.multi_hand_landmarks:
           for hand_landmarks in hand_results.multi_hand_landmarks:
             mp_drawing.draw_landmarks(
@@ -82,11 +82,11 @@ while not rospy.is_shutdown():
                 mp_drawing_styles.get_default_hand_connections_style())
 
         #add right_hand keypoint to ordered message
-        if hand_results.right_hand_landmarks:
+        if hand_results.multi_handedness == 'Right' and enable_right_hand:
           hand_right_msg.right_or_left = hand_right_msg.RIGHT
 
           # Run mediapipe right_hand detection (before and obtain the landmarks)
-          for i in range(len(hand_results.right_hand_landmarks.landmark)):
+          for i in range(len(hand_results.multi_hand_landmarks)):
           
             """
             landmark {
@@ -105,10 +105,10 @@ while not rospy.is_shutdown():
 
             # Read keypoint
             new_keypoint = Keypoint()
-            new_keypoint.x = hand_results.right_hand_landmarks.landmark[i].x
-            new_keypoint.y = hand_results.right_hand_landmarks.landmark[i].y
-            new_keypoint.z = hand_results.right_hand_landmarks.landmark[i].z
-            new_keypoint.v = hand_results.right_hand_landmarks.landmark[i].visibility
+            new_keypoint.x = hand_results.multi_hand_landmarks.landmark[i].x
+            new_keypoint.y = hand_results.multi_hand_landmarks.landmark[i].y
+            new_keypoint.z = hand_results.multi_hand_landmarks.landmark[i].z
+            new_keypoint.v = hand_results.multi_hand_landmarks.landmark[i].visibility
 
             new_keypoint.keypoint_number = i
             new_keypoint.keypoint_name = hand_landmarks_names[i]
@@ -118,21 +118,19 @@ while not rospy.is_shutdown():
 
           hand_right_pub.publish(hand_right_msg)
 
-
         #add left_hand keypoint to ordered message
-        # FIXME: if I have both left and right hand this elif statement is ignored
-        elif hand_results.left_hand_landmarks:
+        if hand_results.multi_handedness == 'Left' and enable_left_hand:
           hand_left_msg.right_or_left = hand_left_msg.LEFT
 
           # Run mediapipe left_hand detection
-          for i in range(len(hand_results.left_hand_landmarks.landmark)):
+          for i in range(len(hand_results.multi_hand_landmarks.landmark)):
           
             # Read keypoint
             new_keypoint = Keypoint()
-            new_keypoint.x = hand_results.left_hand_landmarks.landmark[i].x
-            new_keypoint.y = hand_results.left_hand_landmarks.landmark[i].y
-            new_keypoint.z = hand_results.left_hand_landmarks.landmark[i].z
-            new_keypoint.v = hand_results.left_hand_landmarks.landmark[i].visibility
+            new_keypoint.x = hand_results.multi_hand_landmarks.landmark[i].x
+            new_keypoint.y = hand_results.multi_hand_landmarks.landmark[i].y
+            new_keypoint.z = hand_results.multi_hand_landmarks.landmark[i].z
+            new_keypoint.v = hand_results.multi_hand_landmarks.landmark[i].visibility
 
             new_keypoint.keypoint_number = i
             new_keypoint.keypoint_name = hand_landmarks_names[i]
@@ -155,8 +153,8 @@ while not rospy.is_shutdown():
             mp_pose.POSE_CONNECTIONS,
             landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style())    
 
-        #add pose keypoint to ordered message      
-        for i in range(len(hand_results.pose_landmarks.landmark)):
+        #add pose keypoint to ordered message   
+        for i in range(len(pose_results.pose_landmarks.landmarks)): # BUG : TypeError: object of type 'NoneType' has no len()
 
           """
           x: 0.6068623065948486
@@ -171,10 +169,10 @@ while not rospy.is_shutdown():
 
           # Read keypoint
           new_keypoint = Keypoint()
-          new_keypoint.x = pose_results.pose_landmarks.landmark[i].x
-          new_keypoint.y = pose_results.pose_landmarks.landmark[i].y
-          new_keypoint.z = pose_results.pose_landmarks.landmark[i].z
-          new_keypoint.v = pose_results.pose_landmarks.landmark[i].visibility
+          new_keypoint.x = pose_results.pose_landmarks[i].landmark[i].x
+          new_keypoint.y = pose_results.pose_landmarks[i].landmark[i].y
+          new_keypoint.z = pose_results.pose_landmarks[i].landmark[i].z
+          new_keypoint.v = pose_results.pose_landmarks[i].landmark[i].visibility
           new_keypoint.keypoint_number = i
           new_keypoint.keypoint_name = pose_landmarks_names[i]
           # Append keypoint
@@ -214,8 +212,7 @@ while not rospy.is_shutdown():
                     .get_default_face_mesh_iris_connections_style())
 
         #add face keypoint to ordered message
-        for i in range(len(face_results.multi_face_landmarks.face_landmark)):
-
+        for i in range(len(face_results.multi_face_landmarks.landmarks[i])): # BUG : TypeError: object of type 'NoneType' has no len()
           """
           landmark {
             x: 0.6572769284248352
@@ -231,14 +228,13 @@ while not rospy.is_shutdown():
 
           # Read keypoint
           new_keypoint = Keypoint()
-          new_keypoint.x = face_results.multi_face_landmarks.face_landmark[i].x
-          new_keypoint.y = face_results.multi_face_landmarks.face_landmark[i].y
-          new_keypoint.z = face_results.multi_face_landmarks.face_landmark[i].z
-          # new_keypoint.v = pose_results.face_landmarks.landmark[i].visibility
+          new_keypoint.x = face_results.multi_face_landmarks[i].landmark[i].x
+          new_keypoint.y = face_results.multi_face_landmarks[i].landmark[i].y
+          new_keypoint.z = face_results.multi_face_landmarks[i].landmark[i].z
+          # BUG: new_keypoint.v = pose_results.face_landmarks.landmark[i].visibility
           new_keypoint.keypoint_number = i
 
-          # BUG: 468 Landmarks so we can't make a list like the hands or the pose
-          # I agree, we can set our custom names as FACE_KEYPOINT_1 ...
+          # 468 Landmarks so custom names as FACE_KEYPOINT_1 ...
           new_keypoint.keypoint_name = f'FACE_KEYPOINT_{i}'
           # Append keypoint
           face_msg.keypoints.append(new_keypoint)
@@ -247,14 +243,17 @@ while not rospy.is_shutdown():
 
 
       # Flip the image horizontally for a selfie-view display.
+      # BUG : 3 windows are displayed
       cv2.imshow('MediaPipe Hands', cv2.flip(image, 1))
       cv2.imshow('MediaPipe Pose', cv2.flip(image, 1))
       cv2.imshow('MediaPipe Face Detection', cv2.flip(image, 1))
       if cv2.waitKey(5) & 0xFF == 27:
         break
-  cap.release()
 
-  # Sleep for the Remaining Cycle Time
+  # Last while loop command - Sleep for the Remaining Cycle Time
   rate.sleep()
 
 # END WHILE ROS:OK
+
+# Close Webcam
+cap.release()
