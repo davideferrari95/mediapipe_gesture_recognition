@@ -10,10 +10,10 @@ rate = rospy.Rate(100) # 100hz
 
 
 # Mediapipe Publishers
-hand_right_pub  = rospy.Publisher('/mediapipe/hand_right', Hand, queue_size=1)
-hand_left_pub   = rospy.Publisher('/mediapipe/hand_left', Hand, queue_size=1)
-pose_pub        = rospy.Publisher('/mediapipe/pose', Pose, queue_size=1)
-face_pub        = rospy.Publisher('/mediapipe/face', Face, queue_size=1)
+hand_right_pub  = rospy.Publisher('/mediapipe_gesture_recognition/Hand.msg', Hand, queue_size=1)
+hand_left_pub   = rospy.Publisher('/mediapipe_gesture_recognition/Hand.msg', Hand, queue_size=1)
+pose_pub        = rospy.Publisher('/mediapipe_gesture_recognition/pose.msg', Pose, queue_size=1)
+face_pub        = rospy.Publisher('/mediapipe_gesture_recognition/face.msg', Face, queue_size=1)
 
 # Mediapipe Messages
 hand_right_msg = Hand()
@@ -177,7 +177,7 @@ while not rospy.is_shutdown():
         if pose_results.pose_landmarks:
 
           #add pose keypoint to ordered message   
-          for i in range(len(pose_results.pose_landmarks.landmark)): # BUG : TypeError: object of type 'NoneType' has no len()
+          for i in range(len(pose_results.pose_landmarks.landmark)):
 
             """
             x: 0.6068623065948486
@@ -217,7 +217,7 @@ while not rospy.is_shutdown():
 
         if face_results.face_landmarks:
           #add face keypoint to ordered message
-          for i in range(len(face_results.face_landmarks.landmark)): # BUG : TypeError: object of type 'NoneType' has no len()
+          for i in range(len(face_results.face_landmarks.landmark)):
             """
             landmark {
               x: 0.6572769284248352
