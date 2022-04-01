@@ -43,6 +43,7 @@ mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
 mp_pose = mp.solutions.pose
 mp_face_mesh = mp.solutions.face_mesh
+mp_holistic = mp.solutions.holistic
 
 # Video Webcam
 cap = cv2.VideoCapture(webcam)
@@ -51,7 +52,7 @@ cap = cv2.VideoCapture(webcam)
 # While loop mediapipe code that need to be run each cycle
 while not rospy.is_shutdown():
 
-  with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.5, min_tracking_confidence=0.5) as hands, mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose, mp_face_mesh.FaceMesh(max_num_faces=1, refine_landmarks=True, min_detection_confidence=0.5, min_tracking_confidence=0.5) as face_mesh:
+  with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.5, min_tracking_confidence=0.5) as hands, mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose, mp_face_mesh.FaceMesh(max_num_faces=1, refine_landmarks=True, min_detection_confidence=0.5, min_tracking_confidence=0.5) as face_mesh, mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
     while cap.isOpened():
       success, image = cap.read()
       if not success:
@@ -65,28 +66,21 @@ while not rospy.is_shutdown():
 
 
       if enable_right_hand or enable_left_hand:
-        hand_results = hands.process(image)
+        hand_results = holistic.process(image)
 
-        # Draw the hand annotations on the image.
-        image.flags.writeable = True
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        if enable_right_hand:
+          mp_drawing.draw_landmarks(
+              image,
+              hand_results.right_hand_landmarks,
+              mp_holistic.HAND_CONNECTIONS,
+              mp_drawing_styles.get_default_hand_landmarks_style(),
+              mp_drawing_styles.get_default_hand_connections_style())
 
-        # BUG : The two hands landmarks are not dissociated
-        if hand_results.multi_hand_landmarks:
-          for hand_landmarks in hand_results.multi_hand_landmarks:
-            mp_drawing.draw_landmarks(
-                image,
-                hand_landmarks,
-                mp_hands.HAND_CONNECTIONS,
-                mp_drawing_styles.get_default_hand_landmarks_style(),
-                mp_drawing_styles.get_default_hand_connections_style())
-
-        #add right_hand keypoint to ordered message
-        if hand_results.multi_handedness == 'Right' and enable_right_hand:
+          #add right_hand keypoint to ordered message
           hand_right_msg.right_or_left = hand_right_msg.RIGHT
 
           # Run mediapipe right_hand detection (before and obtain the landmarks)
-          for i in range(len(hand_results.multi_hand_landmarks)):
+          for i in range(len(hand_results.right_hand_landmarks.landmark)):
           
             """
             landmark {
@@ -105,32 +99,40 @@ while not rospy.is_shutdown():
 
             # Read keypoint
             new_keypoint = Keypoint()
-            new_keypoint.x = hand_results.multi_hand_landmarks.landmark[i].x
-            new_keypoint.y = hand_results.multi_hand_landmarks.landmark[i].y
-            new_keypoint.z = hand_results.multi_hand_landmarks.landmark[i].z
-            new_keypoint.v = hand_results.multi_hand_landmarks.landmark[i].visibility
+            new_keypoint.x = hand_results.right_hand_landmarks.landmark[i].x
+            new_keypoint.y = hand_results.right_hand_landmarks.landmark[i].y
+            new_keypoint.z = hand_results.right_hand_landmarks.landmark[i].z
+            new_keypoint.v = hand_results.right_hand_landmarks.landmark[i].visibility
 
             new_keypoint.keypoint_number = i
             new_keypoint.keypoint_name = hand_landmarks_names[i]
 
             # Append keypoint
             hand_right_msg.keypoints.append(new_keypoint)
-
+          
           hand_right_pub.publish(hand_right_msg)
 
         #add left_hand keypoint to ordered message
-        if hand_results.multi_handedness == 'Left' and enable_left_hand:
+        if enable_left_hand:
+          mp_drawing.draw_landmarks(
+              image,
+              hand_results.left_hand_landmarks,
+              mp_holistic.HAND_CONNECTIONS,
+              mp_drawing_styles.get_default_hand_landmarks_style(),
+              mp_drawing_styles.get_default_hand_connections_style())
+
+          #add left_hand keypoint to ordered message
           hand_left_msg.right_or_left = hand_left_msg.LEFT
 
           # Run mediapipe left_hand detection
-          for i in range(len(hand_results.multi_hand_landmarks.landmark)):
+          for i in range(len(hand_results.left_hand_landmarks.landmark)):
           
             # Read keypoint
             new_keypoint = Keypoint()
-            new_keypoint.x = hand_results.multi_hand_landmarks.landmark[i].x
-            new_keypoint.y = hand_results.multi_hand_landmarks.landmark[i].y
-            new_keypoint.z = hand_results.multi_hand_landmarks.landmark[i].z
-            new_keypoint.v = hand_results.multi_hand_landmarks.landmark[i].visibility
+            new_keypoint.x = hand_results.left_hand_landmarks.landmark[i].x
+            new_keypoint.y = hand_results.left_hand_landmarks.landmark[i].y
+            new_keypoint.z = hand_results.left_hand_landmarks.landmark[i].z
+            new_keypoint.v = hand_results.left_hand_landmarks.landmark[i].visibility
 
             new_keypoint.keypoint_number = i
             new_keypoint.keypoint_name = hand_landmarks_names[i]

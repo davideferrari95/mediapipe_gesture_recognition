@@ -100,6 +100,5 @@ include_directories(
 
 install(PROGRAMS 
   scripts/mediapipe_stream_node.py
-  scripts/mediapipe_stream_node_test.py
   DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}
 )
