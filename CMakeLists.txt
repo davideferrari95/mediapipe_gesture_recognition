@@ -27,7 +27,7 @@ add_message_files(
   hand.msg
   face.msg
   right_hand.msg
-  left.hand.msg
+  left_hand.msg
 )
 
 ## Generate services in the 'srv' folder
