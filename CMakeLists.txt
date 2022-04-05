@@ -22,12 +22,10 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  pose.msg  
+  Pose.msg  
   Keypoint.msg
-  hand.msg
-  face.msg
-  right_hand.msg
-  left_hand.msg
+  Hand.msg
+  Face.msg
 )
 
 ## Generate services in the 'srv' folder

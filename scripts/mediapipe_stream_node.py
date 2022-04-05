@@ -1,25 +1,22 @@
 #!/usr/bin/env python3
 
+from turtle import right
 import rospy
 import cv2
 import mediapipe as mp
-from mediapipe_gesture_recognition.msg import right_hand, left_hand, pose, face, Keypoint, Hand
+from mediapipe_gesture_recognition.msg import Pose, Face, Keypoint, Hand
 
 rospy.init_node('mediapipe_stream_node', anonymous=True)
 rate = rospy.Rate(100) # 100hz 
 
 
 # Mediapipe Publishers
-hand_right_pub  = rospy.Publisher('/mediapipe_gesture_recognition/right_hand.msg', right_hand, queue_size=1)
-hand_left_pub   = rospy.Publisher('/mediapipe_gesture_recognition/left_hand.msg', left_hand, queue_size=1)
-pose_pub        = rospy.Publisher('/mediapipe_gesture_recognition/pose.msg', pose, queue_size=1)
-face_pub        = rospy.Publisher('/mediapipe_gesture_recognition/face.msg', face, queue_size=1)
+hand_right_pub  = rospy.Publisher('/mediapipe_gesture_recognition/right_hand', Hand, queue_size=1)
+hand_left_pub   = rospy.Publisher('/mediapipe_gesture_recognition/left_hand', Hand, queue_size=1)
+pose_pub        = rospy.Publisher('/mediapipe_gesture_recognition/pose', Pose, queue_size=1)
+face_pub        = rospy.Publisher('/mediapipe_gesture_recognition/face', Face, queue_size=1)
 
 # Mediapipe Messages
-hand_right_msg = right_hand()
-hand_left_msg = left_hand()
-pose_msg = pose()
-face_msg = face()
 
 # Read Webcam Parameters
 webcam = rospy.get_param('webcam', 0)
@@ -81,6 +78,9 @@ while not rospy.is_shutdown():
 
           if hand_results.right_hand_landmarks:
             #add right_hand keypoint to ordered message
+            hand_right_msg = Hand()
+            hand_right_msg.header.stamp = rospy.Time.now()
+            hand_right_msg.header.frame_id = 'Hand Right Message'
             hand_right_msg.right_or_left = hand_right_msg.RIGHT
 
             for i in range(len(hand_results.right_hand_landmarks.landmark)):
@@ -128,7 +128,10 @@ while not rospy.is_shutdown():
           #add left_hand keypoint to ordered message
           if hand_results.left_hand_landmarks:
             #add left_hand keypoint to ordered message
-            hand_left_msg.right_or_left = hand_left_msg.RIGHT
+            hand_left_msg = Hand()
+            hand_left_msg.header.stamp = rospy.Time.now()
+            hand_left_msg.header.frame_id = 'Hand Left Message'
+            hand_left_msg.right_or_left = hand_left_msg.LEFT
   
             # Run mediapipe right_hand detection (before and obtain the landmarks)
             for i in range(len(hand_results.left_hand_landmarks.landmark)):
@@ -175,6 +178,10 @@ while not rospy.is_shutdown():
             landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style())
 
         if pose_results.pose_landmarks:
+          
+          pose_msg = Pose()
+          pose_msg.header.stamp = rospy.Time.now()
+          pose_msg.header.frame_id = 'Pose Message'
 
           #add pose keypoint to ordered message   
           for i in range(len(pose_results.pose_landmarks.landmark)):
@@ -216,6 +223,11 @@ while not rospy.is_shutdown():
             connection_drawing_spec=mp_drawing_styles.get_default_face_mesh_contours_style())
 
         if face_results.face_landmarks:
+
+          face_msg = Face()
+          face_msg.header.stamp = rospy.Time.now()
+          face_msg.header.frame_id = 'Face Message'
+
           #add face keypoint to ordered message
           for i in range(len(face_results.face_landmarks.landmark)):
             """

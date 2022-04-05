@@ -14,7 +14,6 @@
     <param name="webcam" value="$(arg webcam)"/>
 
     <!-- Enable Mediapipe Modules Parameters -->
-    <param name="enable_holistic"   value="$(arg enable_holistic)"/>
     <param name="enable_right_hand" value="$(arg enable_right_hand)"/>
     <param name="enable_left_hand"  value="$(arg enable_left_hand)"/>
     <param name="enable_pose"       value="$(arg enable_pose)"/>
@@ -22,4 +21,5 @@
 
     <!-- Mediapipe Stream Node -->
     <node pkg="mediapipe_gesture_recognition" type="mediapipe_stream_node.py" name="mediapipe_stream_node" output="screen"/>
+
 </launch>
