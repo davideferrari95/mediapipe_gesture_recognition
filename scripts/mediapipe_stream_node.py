@@ -3,7 +3,7 @@
 import rospy
 import cv2
 import mediapipe as mp
-from mediapipe_gesture_recognition.msg import right_hand, left_hand, Pose, Face, Keypoint, Hand
+from mediapipe_gesture_recognition.msg import right_hand, left_hand, pose, Face, Keypoint, Hand
 
 rospy.init_node('mediapipe_stream_node', anonymous=True)
 rate = rospy.Rate(100) # 100hz 
@@ -18,7 +18,7 @@ face_pub        = rospy.Publisher('/mediapipe_gesture_recognition/face.msg', Fac
 # Mediapipe Messages
 hand_right_msg = right_hand()
 hand_left_msg = left_hand()
-pose_msg = Pose()
+pose_msg = pose()
 face_msg = Face()
 
 # Read Webcam Parameters
