@@ -1,0 +1,6 @@
+<launch>
+
+    <!-- Mediapipe Gesture Recognition Training Node -->
+    <node pkg="mediapipe_gesture_recognition" type="gesture_recognition_training_node.py" name="gesture_recognition_training_node" output="screen"/>
+
+</launch>

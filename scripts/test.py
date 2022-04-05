@@ -84,8 +84,6 @@ if (setup=="setup") :
 
     # 2/ CAPTURE LANDMARKS AND EXPORT TO CSV 
     
-        
-    
     num_coords = len(results.pose_landmarks.landmark )+len(results.right_hand_landmarks.landmark)#+len(results.left_hand_landmarks.landmark)+len(results.face_landmarks.landmark)
 
         

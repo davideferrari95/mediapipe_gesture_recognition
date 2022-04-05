@@ -24,6 +24,8 @@ mp_drawing = mp.solutions.drawing_utils # Drawing helpers
 mp_holistic = mp.solutions.holistic # Mediapipe solutions
 rc=RobotControl()
 
+
+#Draw and export landmarks, calculate probability
 def detection():
     
     with open(f'/home/baheu/ws_sk_tracking/src/sk_tracking/PKL files/{Solution_Choice}.pkl', 'rb') as f:
@@ -563,9 +565,8 @@ def detection():
     cap.release()
     cv2.destroyAllWindows()
 
-
+#3/ TRAIN CUSTOM MODEL USING SCIKIT LEARN
 def train_model():
-    #3/ TRAIN CUSTOM MODEL USING SCIKIT LEARN
     # 3.1/ READ IN COLLECTED DATA AND PROCESS
 
     df = pd.read_csv(f'/home/baheu/ws_sk_tracking/src/sk_tracking/CSV files/{Solution_Choice}.csv')       #read the coordinates on the CSV file 
@@ -597,6 +598,7 @@ def train_model():
     with open(f'/home/baheu/ws_sk_tracking/src/sk_tracking/PKL files/{Solution_Choice}.pkl', 'wb') as f:       #These two lines is build to export the best model "here it's rf" and save it in a files called pose_recognition.pkl
         pickle.dump(fit_models['rf'], f)
 
+#Define which gesture will be linked to which action for the robot
 def Setup_of_robot_action():
     with open(f"/home/baheu/ws_sk_tracking/src/sk_tracking/TXT file/Position_Name/Position_Name_{Solution_Choice}.txt", "r") as file: 
         allText = file.read() 
