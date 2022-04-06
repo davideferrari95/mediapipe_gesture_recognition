@@ -7,7 +7,9 @@ from mediapipe_gesture_recognition.msg import Pose, Face, Keypoint, Hand
 
 class MediapipeStreaming:
   
-  def __init__(self, webcam, enable_right_hand, enable_left_hand, enable_pose, enable_face):
+  def __init__(self, webcam, enable_right_hand = False, enable_left_hand = False, \
+                             enable_pose = False, enable_face = False, \
+                             enable_objectron = False, objectron_model = 'Shoe'):
     
     # Mediapipe Publishers
     self.hand_right_pub  = rospy.Publisher('/mediapipe_gesture_recognition/right_hand', Hand, queue_size=1)
@@ -27,6 +29,8 @@ class MediapipeStreaming:
     self.enable_left_hand = enable_left_hand
     self.enable_pose = enable_pose
     self.enable_face = enable_face
+    self.enable_objectron = enable_objectron
+    if enable_objectron: self.objectron_model = objectron_model
 
     # Define Landmarks Names
     self.hand_landmarks_names = ['WRIST', 'THUMB_CMC', 'THUMB_MCP', 'THUMB_IP', 'THUMB_TIP', 'INDEX_FINGER_MCP', 'INDEX_FINGER_PIP', 'INDEX_FINGER_DIP', 'INDEX_FINGER_TIP', 'MIDDLE_FINGER_MCP', 'MIDDLE_FINGER_PIP', 'MIDDLE_FINGER_DIP', 'MIDDLE_FINGER_TIP', 'RING_FINGER_MCP', 'RING_FINGER_PIP', 'RING_FINGER_DIP', 'RING_FINGER_TIP', 'PINKY_MCP', 'PINKY_PIP', 'PINKY_DIP', 'PINKY_TIP']
@@ -35,10 +39,8 @@ class MediapipeStreaming:
     # Initialize Mediapipe:
     self.mp_drawing = mp.solutions.drawing_utils
     self.mp_drawing_styles = mp.solutions.drawing_styles
-    self.mp_hands = mp.solutions.hands
-    self.mp_pose = mp.solutions.pose
-    self.mp_face_mesh = mp.solutions.face_mesh
     self.mp_holistic = mp.solutions.holistic
+    self.mp_objectron = mp.solutions.objectron
 
     # Open Video Webcam
     self.cap = cv2.VideoCapture(self.webcam)
@@ -148,12 +150,36 @@ class MediapipeStreaming:
         face_msg.keypoints.append(new_keypoint)
 
       self.face_pub.publish(face_msg)
+  
+  def processObjectron(self, objectronResults, image):
     
+    # Draw the Box Landmarks on the Image
+    image.flags.writeable = True
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    
+    if objectronResults.detected_objects:
+        
+      for detected_object in objectronResults.detected_objects:
+            
+        # Draw Landmarks
+        self.mp_drawing.draw_landmarks(
+          image,
+          detected_object.landmarks_2d,
+          self.mp_objectron.BOX_CONNECTIONS)
+
+        # Draw Axis
+        self.mp_drawing.draw_axis(
+          image,
+          detected_object.rotation,
+          detected_object.translation)
+      
   def stream(self):
         
     # Open Mediapipe Holistic
-    with self.mp_holistic.Holistic(refine_face_landmarks=True, min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
-      
+    with self.mp_holistic.Holistic(refine_face_landmarks=True, min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic, \
+         self.mp_objectron.Objectron(static_image_mode=False, max_num_objects=5, min_detection_confidence=0.5, \
+                                     min_tracking_confidence=0.99, model_name=self.objectron_model) as objectron:
+
       # Open Webcam
       while self.cap.isOpened() and not rospy.is_shutdown():
         
@@ -197,6 +223,14 @@ class MediapipeStreaming:
           # Process Pose Landmakrs
           self.processFace(face_results, image)
 
+        if self.enable_objectron:
+          
+          # Get Objectron Results from Mediapipe
+          objectron_results = objectron.process(image)
+          
+          # Process Objectron
+          self.processObjectron(objectron_results, image)
+
         # Flip the image horizontally for a selfie-view display.
         cv2.imshow('MediaPipe Landmarks', cv2.flip(image, 1))
         if cv2.waitKey(5) & 0xFF == 27:
@@ -216,9 +250,12 @@ if __name__ == "__main__":
   enable_left_hand_ = rospy.get_param('enable_left_hand', False)
   enable_pose_ = rospy.get_param('enable_pose', False)
   enable_face_ = rospy.get_param('enable_face', False)
+  enable_objectron_ = rospy.get_param('enable_objectron', False)
+  
+  objectron_model_ = ['Shoe', 'Chair', 'Cup', 'Camera']
   
   # Create Mediapipe Class
-  MediapipeStream = MediapipeStreaming(webcam_, enable_right_hand_, enable_left_hand_, enable_pose_, enable_face_)
+  MediapipeStream = MediapipeStreaming(webcam_, enable_right_hand_, enable_left_hand_, enable_pose_, enable_face_, enable_objectron_, objectron_model_[0])
   
   # While ROS::OK
   while not rospy.is_shutdown():
