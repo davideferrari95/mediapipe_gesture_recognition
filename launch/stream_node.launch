@@ -4,7 +4,6 @@
     <arg name="webcam" default="0"/>
 
     <!-- Enable Mediapipe Modules Args -->
-    <arg name="enable_holistic"     default="true"/>
     <arg name="enable_right_hand"   default="false"/>
     <arg name="enable_left_hand"    default="false"/>
     <arg name="enable_pose"         default="false"/>
