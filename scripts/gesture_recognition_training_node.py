@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy
+import csv
 from mediapipe_gesture_recognition.msg import Pose, Face, Hand
 #from mediapipe_stream_node import
 
@@ -74,7 +75,7 @@ def createfiles():
         for val in range len(landmark): # BUG : Maybe we can use one value for the range to simplify the creation of the CSV file
             landmarks += ['x{}'.format(val), 'y{}'.format(val), 'z{}'.format(val), 'v{}'.format(val)]   
         with open(f'/home/tanguy/tanguy_ws/src/mediapipe_gesture_recognition/CSV files/{File_Name}.csv', mode='w', newline='') as f:
-            csv_writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            csv_writer = csv.writer(f, delimiter=',', quotechar='"', quoting= csv.QUOTE_MINIMAL)
             csv_writer.writerow(landmarks)
 
 #3/ TRAIN CUSTOM MODEL USING SCIKIT LEARN
