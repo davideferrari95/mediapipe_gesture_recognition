@@ -5,6 +5,7 @@ import cv2
 import mediapipe as mp
 from mediapipe_gesture_recognition.msg import Pose, Face, Keypoint, Hand
 
+
 '''
 To Obtain The Available Cameras: 
 

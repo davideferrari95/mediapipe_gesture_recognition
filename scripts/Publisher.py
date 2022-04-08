@@ -327,7 +327,7 @@ def param():
                 choice_okay=input("Are you done with the setup, if it's okay please write : GO , if it's not write anything ")
 
 
-#Creation of the CSV file where the datas will be savec       
+#Creation of the CSV file where the datas will be saved       
 def createfiles():
         # Firstly I create some txt files to save the parameters of this session to use it in the following nodes
         
