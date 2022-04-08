@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import csv
 import rospy
 import cv2
 import mediapipe as mp
