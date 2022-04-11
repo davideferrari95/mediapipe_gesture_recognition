@@ -595,7 +595,7 @@ def train_model():
         yhat = model.predict(X_test)
         print(algo, accuracy_score(y_test, yhat))                                                            #These line is to predict and showed the precision of the 4 pipelines, to choose witch one is the preciser
 
-    with open(f'/home/baheu/ws_sk_tracking/src/sk_tracking/PKL files/{Solution_Choice}.pkl', 'wb') as f:       #These two lines is build to export the best model "here it's rf" and save it in a files called pose_recognition.pkl
+    with open(f'/home/baheu/ws_sk_tracking/src/sk_tracking/PKL files/{Solution_Choice}.pkl', 'wb') as f:       #These two lines is build to export the best model "here it's rf" and save it in a pkl files
         pickle.dump(fit_models['rf'], f)
 
 #Define which gesture will be linked to which action for the robot

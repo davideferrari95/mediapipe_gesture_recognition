@@ -198,7 +198,7 @@ class MediapipeStreaming:
         new_keypoint.keypoint_number = i
 
         # Assing Keypoint Name (468 Landmarks -> Names = FACE_KEYPOINT_1 ...)
-        new_keypoint.keypoint_name = f'FACE_KEYPOINT_{i+1}'
+        new_keypoint.keypoint_name = f'FACE_KEYPOINT_{i}'
 
         # Append Keypoint
         face_msg.keypoints.append(new_keypoint)
