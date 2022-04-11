@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import csv
 import rospy
 import cv2
 import mediapipe as mp
@@ -109,7 +108,8 @@ class MediapipeStreaming:
     new_keypoint.keypoint_name = name
     
     return new_keypoint
-    
+
+
 ############################################################
 #                    Holistic Functions                    #
 ############################################################
@@ -198,7 +198,7 @@ class MediapipeStreaming:
         new_keypoint.keypoint_number = i
 
         # Assing Keypoint Name (468 Landmarks -> Names = FACE_KEYPOINT_1 ...)
-        new_keypoint.keypoint_name = f'FACE_KEYPOINT_{i}'
+        new_keypoint.keypoint_name = f'FACE_KEYPOINT_{i+1}'
 
         # Append Keypoint
         face_msg.keypoints.append(new_keypoint)
