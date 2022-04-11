@@ -44,9 +44,9 @@ def handRightCallback(right_hand):
             with open(f'/home/tanguy/tanguy_ws/src/mediapipe_gesture_recognition/CSV files/{File_Name}.csv', mode='a', newline='') as f:         #Write the list into the CSV file
               csv.writer.writeheader()
               csv_writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-              csv_writer.writerow({ 'x': right_hand.keypoints[i].x, 'y': right_hand.keypoints[i].y,
-                                    'z': right_hand.keypoints[i].z, 'v': right_hand.keypoints[i].v,
-                                    'keypoint_number': right_hand.keypoints[i].keypoint_number, 'keypoint_name': right_hand.keypoints[i].keypoint_name})   
+              csv_writer.writerow({ 'x{}'.format(i): right_hand.keypoints[i].x, 'y{}'.format(i): right_hand.keypoints[i].y,
+                                    'z{}'.format(i): right_hand.keypoints[i].z, 'v{}'.format(i): right_hand.keypoints[i].v,
+                                    'keypoint_number{}'.format(i): right_hand.keypoints[i].keypoint_number, 'keypoint_name{}'.format(i): right_hand.keypoints[i].keypoint_name })   
 
 
     #Insert the landmarks coordinates in the csv file
@@ -167,13 +167,13 @@ enable_left_hand = rospy.get_param('enable_left_hand', False)
 enable_pose = rospy.get_param('enable_pose', False)
 enable_face = rospy.get_param('enable_face', False)
 
-
+ 
 #SETTINGS STEP
 
 # While ROS OK
 while not rospy.is_shutdown():
     # Write the project name on a TXT file
-    File_Name=input("What is your project name ?")
+    File_Name=input("What is your project name ? ")
     Project_name_txt=open('/home/tanguy/tanguy_ws/src/mediapipe_gesture_recognition/TXT file/projectname.txt','w')
     Project_name_txt.write(File_Name)
     Project_name_txt.close()
