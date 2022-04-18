@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-from turtle import right
+from turtle import delay, right
+from typing import Counter
 import rospy
 import csv
 import cv2
@@ -15,38 +16,34 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.metrics import accuracy_score # Accuracy metrics 
 import pickle 
 import os
-
+import time
 from mediapipe_gesture_recognition.msg import Pose, Face, Hand
 from mediapipe_stream_node import MediapipeStreaming
 
 
 
 # Mediapipe Subscribers Callback
-def handRightCallback(right_hand): 
+def handRightCallback(datas): #Have to read the datas from the topic and copy the content of the datas to global variable 
+                                    #and update that variable every time a message is received
+                                    #use the callback only for read and use the global variable in the main loop
     print('-----------------------------------')
-    print('Header', right_hand.header)  
+    print('Header', datas.header)  
     print('---')
-    print('Right or Left', right_hand.right_or_left)
+    print('Right or Left', datas.right_or_left)
     print('---')
-    print('Keypoints', right_hand.keypoints) #msg.keypoints[i]
+    print('Keypoints', datas.keypoints) #msg.keypoints[i]
 
-    #Setup the positions
-    nbr_pos=int(input("How many position do you want to setup? (min of 2) "))
-    i=0
-    name_position=[]
-    while (i<nbr_pos):
-        i+=1
-        class_name=input("What's the name of your position ?")
-        name_position.append(class_name)
-        print("Press q when your position is setup") #BUG : Need to creat a line where we stop the code with the letter q
+    #BUG : save the incoming message in a global variable and when we are recording, save the message in the csv file
+    right_new_msg = datas
+    
 
-        for i in range (len(right_hand.keypoints)):
-            with open(f'/home/tanguy/tanguy_ws/src/mediapipe_gesture_recognition/CSV files/{File_Name}.csv', mode='a', newline='') as f:         #Write the list into the CSV file
-              csv.writer.writeheader()
-              csv_writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-              csv_writer.writerow({ 'x{}'.format(i): right_hand.keypoints[i].x, 'y{}'.format(i): right_hand.keypoints[i].y,
-                                    'z{}'.format(i): right_hand.keypoints[i].z, 'v{}'.format(i): right_hand.keypoints[i].v,
-                                    'keypoint_number{}'.format(i): right_hand.keypoints[i].keypoint_number, 'keypoint_name{}'.format(i): right_hand.keypoints[i].keypoint_name })   
+    ###for i in range (len(right_hand.keypoints)):
+    ###    with open(f'/home/tanguy/tanguy_ws/src/mediapipe_gesture_recognition/CSV files/{File_Name}.csv', mode='a', newline='') as f:         #Write the list into the CSV file
+    ###      csv.writer.writeheader()
+    ###      csv_writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+    ###      csv_writer.writerow({ 'x{}'.format(i): right_hand.keypoints[i].x, 'y{}'.format(i): right_hand.keypoints[i].y,
+    ###                            'z{}'.format(i): right_hand.keypoints[i].z, 'v{}'.format(i): right_hand.keypoints[i].v,
+    ###                            'keypoint_number{}'.format(i): right_hand.keypoints[i].keypoint_number, 'keypoint_name{}'.format(i): right_hand.keypoints[i].keypoint_name })   
 
 
     #Insert the landmarks coordinates in the csv file
@@ -62,29 +59,21 @@ def handRightCallback(right_hand):
     writer.writerow({'first_name': 'Wonderful', 'last_name': 'Spam'})
     '''
 
-def handLeftCallback(left_hand):
-    print('-----------------------------------')
-    print('Header', left_hand.header)  
-    print('---')
-    print('Right or Left', left_hand.right_or_left)
-    print('---')
-    print('Keypoints', left_hand.keypoints) #msg.keypoints[i]
 
-def PoseCallback(pose):
+def handLeftCallback(datas):
     print('-----------------------------------')
-    print('Header', pose.header)  
-    print('---')
-    print('Right or Left', pose.right_or_left)
-    print('---')
-    print('Keypoints', pose.keypoints) #msg.keypoints[i]
+    print('Header', datas.header)  
 
-def FaceCallback(face):
+
+def PoseCallback(datas):
     print('-----------------------------------')
-    print('Header', face.header)  
-    print('---')
-    print('Right or Left', face.right_or_left)
-    print('---')
-    print('Keypoints', face.keypoints) #msg.keypoints[i]
+    print('Header', datas.header)  
+
+
+def FaceCallback(datas):
+    print('-----------------------------------')
+    print('Header', datas.header)  
+
 
 #Creation of the CSV file where the datas will be saved
 def createfiles():
@@ -149,17 +138,25 @@ def train_model():
     with open(f'/home/tanguy/tanguy_ws/src/mediapipe_gesture_recognition/PKL files/{Solution_Choice}.pkl', 'wb') as f:       #These two lines is build to export the best model "here it's rf" and save it in a files called pose_recognition.pkl
         pickle.dump(fit_models['rf'], f)
 
+def countdown(num_of_secs):
+    while num_of_secs:
+        m, s = divmod(num_of_secs, 60)
+        min_sec_format = '{:02d}:{:02d}'.format(m, s)
+        print(min_sec_format, end='/r')
+        time.sleep(1)
+        num_of_secs -= 1
+        
+    print('Countdown finished')
 
 #Initialisation
 rospy.init_node('mediapipe_streamgesture_recognition_training_node', anonymous=True) 
 rate = rospy.Rate(100) 
-hand_right_pub  = rospy.Publisher('/mediapipe_gesture_recognition/right_hand', Hand, queue_size=1) 
-hand_left_pub   = rospy.Publisher('/mediapipe_gesture_recognition/left_hand', Hand, queue_size=1)
-pose_pub        = rospy.Publisher('/mediapipe_gesture_recognition/pose', Pose, queue_size=1)
-face_pub        = rospy.Publisher('/mediapipe_gesture_recognition/face', Face, queue_size=1)
 
 # Mediapipe Subscribers
 rospy.Subscriber('/mediapipe_gesture_recognition/right_hand', Hand, handRightCallback)
+rospy.Subscriber('/mediapipe_gesture_recognition/left_hand', Hand, handLeftCallback)
+rospy.Subscriber('/mediapipe_gesture_recognition/pose', Pose, PoseCallback)
+rospy.Subscriber('/mediapipe_gesture_recognition/face', Face, FaceCallback)
 
 # Read Mediapipe Modules Parameters
 enable_right_hand = rospy.get_param('enable_right_hand', False)
@@ -167,11 +164,13 @@ enable_left_hand = rospy.get_param('enable_left_hand', False)
 enable_pose = rospy.get_param('enable_pose', False)
 enable_face = rospy.get_param('enable_face', False)
 
- 
+
 #SETTINGS STEP
 
 # While ROS OK
-while not rospy.is_shutdown():
+while not rospy.is_shutdown(): # 2 parts : recording phase and then training phase
+    #RECORDING PHASE
+    
     # Write the project name on a TXT file
     File_Name=input("What is your project name ? ")
     Project_name_txt=open('/home/tanguy/tanguy_ws/src/mediapipe_gesture_recognition/TXT file/projectname.txt','w')
@@ -180,11 +179,41 @@ while not rospy.is_shutdown():
     
     Solution_Choice=input("\nWhat is the name of this training ?")
 
+    #Setup positions
+    nbr_pos=int(input("How many position do you want to setup? (min of 2) "))
+    i=0
+    name_position=[]
+    while (i<nbr_pos):
+        i+=1
+        class_name=input("What's the name of your position ?")
+        name_position.append(class_name)
+        
+        #Creation of a 5s counter
+        print("The acquisition will start in     5s")
+        countdown(5)
+
+        #Recognise gesture for 30 seconds with another counter
+        print("Start of the acquisition")
+        countdown(30)
+        handRightCallback()
+        
+        #BUG : insert datas in the database (probably MySql)
+
+        print("End of the acquisition for this position")
+            
+    
+
     createfiles()
 
-    #train_model()
 
-    handRightCallback()
+    #TRAINING PHASE : load database, 
+    train_model()
+
+    
 
     # Sleep for the Remaining Cycle Time
     rate.sleep() 
+
+
+
+
