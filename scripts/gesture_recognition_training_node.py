@@ -19,7 +19,9 @@ import os
 import time
 from mediapipe_gesture_recognition.msg import Pose, Face, Hand
 from mediapipe_stream_node import MediapipeStreaming
-
+import pyarrow.parquet as pq
+import mysql.connector
+from mysql.connector import Error
 
 
 # Mediapipe Subscribers Callback
@@ -59,21 +61,85 @@ def handRightCallback(datas): #Have to read the datas from the topic and copy th
     writer.writerow({'first_name': 'Wonderful', 'last_name': 'Spam'})
     '''
 
-
 def handLeftCallback(datas):
     print('-----------------------------------')
     print('Header', datas.header)  
-
 
 def PoseCallback(datas):
     print('-----------------------------------')
     print('Header', datas.header)  
 
-
 def FaceCallback(datas):
     print('-----------------------------------')
     print('Header', datas.header)  
 
+
+#MySQL fonctions
+def create_db_connection(host_name, user_name, user_password,db_name):  #exemple: connection = create_server_connection("localhost", "root", pw, "school")
+    connection = None
+    try:
+        connection = mysql.connector.connect(
+            host=host_name,
+            user=user_name,
+            passwd=user_password,
+            database=db_name
+        )
+        print("MySQL Database connection successful")
+    except Error as err:
+        print(f"Error: '{err}'")
+
+    return connection
+
+def create_database(connection, query):     #exemple:   create_database_query = "CREATE DATABASE school"
+    cursor = connection.cursor()                       #create_database(connection, create_database_query)
+    try:
+        cursor.execute(query)
+        print("Database created successfully")
+    except Error as err:
+        print(f"Error: '{err}'")
+
+def execute_query(connection, query):
+    cursor = connection.cursor()
+    try:
+        cursor.execute(query)
+        connection.commit()
+        print("Query successful")
+    except Error as err:
+        print(f"Error: '{err}'")
+
+#Creation of the MySQL Database
+def createMySQLfiles():
+    #SQL query to create the database:
+    create_database_query = "CREATE DATABASE Gesture_recognition" 
+
+    #SQL query to create the table:
+    create_landmarks_table = """ 
+        CREATE TABLE IF NOT EXISTS Landmarks ( 
+        id int(10) NOT NULL,
+        keypoint_number int(6) DEFAULT NULL, 
+        keypoint_name varchar(100) DEFAULT NULL, 
+        x float(24) DEFAULT NULL, 
+        y float(24) DEFAULT NULL, 
+        z float(24) DEFAULT NULL, 
+        v float(24) DEFAULT NULL, 
+        PRIMARY KEY(id), 
+        ); """
+
+    #SQL query to add columns for all the landmarks coordinates
+    add_columns = """ALTER TABLE Landmarks ADD (
+        keypoint_number int(6) DEFAULT NULL, 
+        keypoint_name varchar(100) DEFAULT NULL, 
+        x float(24) DEFAULT NULL, 
+        y float(24) DEFAULT NULL, 
+        z float(24) DEFAULT NULL, 
+        v float(24) DEFAULT NULL, 
+        );"""
+
+    create_database(connection, create_database_query)  #Create database
+    connection = create_db_connection("localhost", "root", '','Gesture_recognition') # Connect to the Database
+    execute_query(connection, create_landmarks_table)   #Create "Landmarks" table in the database
+    for i in range (468): #BUG : adapt the range to the exact number of landmarks
+        execute_query(connection, add_columns)
 
 #Creation of the CSV file where the datas will be saved
 def createfiles():
@@ -104,6 +170,7 @@ def createfiles():
         with open(f'/home/tanguy/tanguy_ws/src/mediapipe_gesture_recognition/CSV files/{File_Name}.csv', mode='w', newline='') as f:
             csv_writer = csv.writer(f, delimiter=',', quotechar='"', quoting= csv.QUOTE_MINIMAL)
             csv_writer.writerow(landmarks)
+
 
 #3/ TRAIN CUSTOM MODEL USING SCIKIT LEARN
 def train_model():
@@ -196,14 +263,19 @@ while not rospy.is_shutdown(): # 2 parts : recording phase and then training pha
         print("Start of the acquisition")
         countdown(30)
         handRightCallback()
+        createMySQLfiles()
         
-        #BUG : insert datas in the database (probably MySql)
+        connection = create_db_connection("localhost", "root", '', 'Gesture_recognition')
+ 
+        while():
+            pop_landmarks = """ INSERT INTO Landmarks VALUES
+            (datas.keypoint),
+            """
+            execute_query(connection, pop_landmarks)           
+
+
 
         print("End of the acquisition for this position")
-            
-    
-
-    createfiles()
 
 
     #TRAINING PHASE : load database, 
