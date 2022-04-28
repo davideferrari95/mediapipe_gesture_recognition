@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from asyncio.base_futures import _FINISHED
 from turtle import delay, right
 from typing import Counter
 import rospy
@@ -25,56 +26,50 @@ from mysql.connector import Error
 
 
 # Mediapipe Subscribers Callback
-def handRightCallback(datas): #Have to read the datas from the topic and copy the content of the datas to global variable 
+def handRightCallback(data): #Have to read the datas from the topic and copy the content of the datas to global variable 
                                     #and update that variable every time a message is received
                                     #use the callback only for read and use the global variable in the main loop
-    print('-----------------------------------')
-    print('Header', datas.header)  
-    print('---')
-    print('Right or Left', datas.right_or_left)
-    print('---')
-    print('Keypoints', datas.keypoints) #msg.keypoints[i]
+    #print('-----------------------------------')
+    #print('Header', datas.header)  
+    #print('---')
+    #print('Right or Left', datas.right_or_left)
+    #print('---')
+    #print('Keypoints', datas.keypoints) #msg.keypoints[i]
 
     #BUG : save the incoming message in a global variable and when we are recording, save the message in the csv file
-    right_new_msg = datas
-    
+    global right_new_msg
+    right_new_msg = Hand()
+    right_new_msg = data
+    print (right_new_msg)
 
-    ###for i in range (len(right_hand.keypoints)):
-    ###    with open(f'/home/tanguy/tanguy_ws/src/mediapipe_gesture_recognition/CSV files/{File_Name}.csv', mode='a', newline='') as f:         #Write the list into the CSV file
-    ###      csv.writer.writeheader()
-    ###      csv_writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-    ###      csv_writer.writerow({ 'x{}'.format(i): right_hand.keypoints[i].x, 'y{}'.format(i): right_hand.keypoints[i].y,
-    ###                            'z{}'.format(i): right_hand.keypoints[i].z, 'v{}'.format(i): right_hand.keypoints[i].v,
-    ###                            'keypoint_number{}'.format(i): right_hand.keypoints[i].keypoint_number, 'keypoint_name{}'.format(i): right_hand.keypoints[i].keypoint_name })   
+def handLeftCallback(data):
+    global left_new_msg 
+    left_new_msg = data 
 
+def PoseCallback(data):
+    global pose_new_msg 
+    pose_new_msg = data
 
-    #Insert the landmarks coordinates in the csv file
-
-    '''
-    with open('names.csv', 'w', newline='') as csvfile:
-    fieldnames = ['first_name', 'last_name']
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-    writer.writeheader()
-    writer.writerow({'first_name': 'Baked', 'last_name': 'Beans'})
-    writer.writerow({'first_name': 'Lovely', 'last_name': 'Spam'})
-    writer.writerow({'first_name': 'Wonderful', 'last_name': 'Spam'})
-    '''
-
-def handLeftCallback(datas):
-    print('-----------------------------------')
-    print('Header', datas.header)  
-
-def PoseCallback(datas):
-    print('-----------------------------------')
-    print('Header', datas.header)  
-
-def FaceCallback(datas):
-    print('-----------------------------------')
-    print('Header', datas.header)  
+def FaceCallback(data):
+    global face_new_msg 
+    face_new_msg = data
 
 
 #MySQL fonctions
+def create_server_connection(host_name, user_name, user_password):
+    connection = None
+    try:
+        connection = mysql.connector.connect(
+            host=host_name,
+            user=user_name,
+            passwd=user_password
+        )
+        print("MySQL Database connection successful")
+    except Error as err:
+        print(f"Error: '{err}'")
+
+    return connection
+
 def create_db_connection(host_name, user_name, user_password,db_name):  #exemple: connection = create_server_connection("localhost", "root", pw, "school")
     connection = None
     try:
@@ -108,10 +103,13 @@ def execute_query(connection, query):
         print(f"Error: '{err}'")
 
 #Creation of the MySQL Database
-def createMySQLfiles():
+def createMySQLdatabase():
     #SQL query to create the database:
     create_database_query = "CREATE DATABASE Gesture_recognition" 
+    create_database(connection, create_database_query)  #Create database
 
+#Creation of the MySQL table
+def createMySQLtable():
     #SQL query to create the table:
     create_landmarks_table = """ 
         CREATE TABLE IF NOT EXISTS Landmarks ( 
@@ -135,7 +133,6 @@ def createMySQLfiles():
         v float(24) DEFAULT NULL, 
         );"""
 
-    create_database(connection, create_database_query)  #Create database
     connection = create_db_connection("localhost", "root", '','Gesture_recognition') # Connect to the Database
     execute_query(connection, create_landmarks_table)   #Create "Landmarks" table in the database
     for i in range (468): #BUG : adapt the range to the exact number of landmarks
@@ -170,6 +167,8 @@ def createfiles():
         with open(f'/home/tanguy/tanguy_ws/src/mediapipe_gesture_recognition/CSV files/{File_Name}.csv', mode='w', newline='') as f:
             csv_writer = csv.writer(f, delimiter=',', quotechar='"', quoting= csv.QUOTE_MINIMAL)
             csv_writer.writerow(landmarks)
+
+        #exemple : "INSERT INTO favourite (number, info) VALUES (%s, %s)", (numbers, animals))
 
 
 #3/ TRAIN CUSTOM MODEL USING SCIKIT LEARN
@@ -206,10 +205,10 @@ def train_model():
         pickle.dump(fit_models['rf'], f)
 
 def countdown(num_of_secs):
-    while num_of_secs:
+    while (num_of_secs!=0):
         m, s = divmod(num_of_secs, 60)
         min_sec_format = '{:02d}:{:02d}'.format(m, s)
-        print(min_sec_format, end='/r')
+        print(min_sec_format)
         time.sleep(1)
         num_of_secs -= 1
         
@@ -217,7 +216,7 @@ def countdown(num_of_secs):
 
 #Initialisation
 rospy.init_node('mediapipe_streamgesture_recognition_training_node', anonymous=True) 
-rate = rospy.Rate(100) 
+rate = rospy.Rate(100)
 
 # Mediapipe Subscribers
 rospy.Subscriber('/mediapipe_gesture_recognition/right_hand', Hand, handRightCallback)
@@ -246,40 +245,44 @@ while not rospy.is_shutdown(): # 2 parts : recording phase and then training pha
     
     Solution_Choice=input("\nWhat is the name of this training ?")
 
+ 
+    connection = create_server_connection("localhost", "root", '')
+
     #Setup positions
     nbr_pos=int(input("How many position do you want to setup? (min of 2) "))
     i=0
-    name_position=[]
+    name_position=[] #List with the names of the differents positions
     while (i<nbr_pos):
         i+=1
         class_name=input("What's the name of your position ?")
         name_position.append(class_name)
         
         #Creation of a 5s counter
-        print("The acquisition will start in     5s")
+        print("The acquisition will start in 5s")
         countdown(5)
 
         #Recognise gesture for 30 seconds with another counter
         print("Start of the acquisition")
-        countdown(30)
-        handRightCallback()
-        createMySQLfiles()
         
-        connection = create_db_connection("localhost", "root", '', 'Gesture_recognition')
- 
-        while():
-            pop_landmarks = """ INSERT INTO Landmarks VALUES
-            (datas.keypoint),
-            """
-            execute_query(connection, pop_landmarks)           
-
+        createMySQLdatabase()
+        connection = create_db_connection("localhost", "root", '', 'Gesture_recognition')   #Connecton to the database "Gesture_recognition" 
+        
+        createMySQLtable()
+        
+        timevariable=time.time()                    #Variable where we stock time
+        while(time.time()-timevariable<30000):      #30s in milliseconds
+            var_string = ', '.join('?' * len(right_new_msg))
+            pop_landmarks = 'INSERT INTO table VALUES %s;' % var_string
+            #pop_landmarks = """ INSERT INTO Landmarks VALUES %s;""".join(right_new_msg)
+            execute_query(connection, pop_landmarks)
 
 
         print("End of the acquisition for this position")
 
+    print('the',nbr_pos,'positions have been saved')
 
     #TRAINING PHASE : load database, 
-    train_model()
+    #train_model()
 
     
 
