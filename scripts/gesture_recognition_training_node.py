@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 from asyncio.base_futures import _FINISHED
+from re import I
+from tkinter import Variable
 from turtle import delay, right
 from typing import Counter
 import rospy
@@ -37,10 +39,21 @@ def handRightCallback(data): #Have to read the datas from the topic and copy the
     #print('Keypoints', datas.keypoints) #msg.keypoints[i]
 
     #BUG : save the incoming message in a global variable and when we are recording, save the message in the csv file
+    global count  
+    count = []
+    for i in range(len(data.keypoints)):
+        count.append(data.keypoints[i])
+
     global right_new_msg
-    right_new_msg = Hand()
-    right_new_msg = data
-    print (right_new_msg)
+    right_new_msg = []
+    for i in range(len(data.keypoints)):
+        right_new_msg.append(data.keypoints[i].keypoint_number)
+        right_new_msg.append(data.keypoints[i].keypoint_name)
+        right_new_msg.append(data.keypoints[i].x)
+        right_new_msg.append(data.keypoints[i].y)
+        right_new_msg.append(data.keypoints[i].z)
+        right_new_msg.append(data.keypoints[i].v)
+
 
 def handLeftCallback(data):
     global left_new_msg 
@@ -64,7 +77,7 @@ def create_server_connection(host_name, user_name, user_password):
             user=user_name,
             passwd=user_password
         )
-        print("MySQL Database connection successful")
+        print("MySQL server connection successful")
     except Error as err:
         print(f"Error: '{err}'")
 
@@ -105,38 +118,51 @@ def execute_query(connection, query):
 #Creation of the MySQL Database
 def createMySQLdatabase():
     #SQL query to create the database:
-    create_database_query = "CREATE DATABASE Gesture_recognition" 
+    create_database_query = "CREATE DATABASE IF NOT EXISTS Gesture_recognition" 
     create_database(connection, create_database_query)  #Create database
 
 #Creation of the MySQL table
 def createMySQLtable():
     #SQL query to create the table:
+    delete_table = "DROP TABLE Landmarks;"
+    
     create_landmarks_table = """ 
         CREATE TABLE IF NOT EXISTS Landmarks ( 
-        id int(10) NOT NULL,
-        keypoint_number int(6) DEFAULT NULL, 
-        keypoint_name varchar(100) DEFAULT NULL, 
-        x float(24) DEFAULT NULL, 
-        y float(24) DEFAULT NULL, 
-        z float(24) DEFAULT NULL, 
-        v float(24) DEFAULT NULL, 
-        PRIMARY KEY(id), 
+        id int(10) NOT NULL AUTO_INCREMENT,
+        keypoint_number0 int(6) DEFAULT NULL, 
+        keypoint_name0 varchar(100) DEFAULT NULL, 
+        x0 float(24) DEFAULT NULL, 
+        y0 float(24) DEFAULT NULL, 
+        z0 float(24) DEFAULT NULL, 
+        v0 float(24) DEFAULT NULL, 
+        PRIMARY KEY(id)
         ); """
 
-    #SQL query to add columns for all the landmarks coordinates
-    add_columns = """ALTER TABLE Landmarks ADD (
-        keypoint_number int(6) DEFAULT NULL, 
-        keypoint_name varchar(100) DEFAULT NULL, 
-        x float(24) DEFAULT NULL, 
-        y float(24) DEFAULT NULL, 
-        z float(24) DEFAULT NULL, 
-        v float(24) DEFAULT NULL, 
-        );"""
-
-    connection = create_db_connection("localhost", "root", '','Gesture_recognition') # Connect to the Database
-    execute_query(connection, create_landmarks_table)   #Create "Landmarks" table in the database
-    for i in range (468): #BUG : adapt the range to the exact number of landmarks
-        execute_query(connection, add_columns)
+    cursor = connection.cursor()
+    cursor.execute(delete_table)
+    cursor.execute(create_landmarks_table)
+    connection.commit()
+    print ("Table created successfully")
+    #connection = create_db_connection("localhost", "root", '','Gesture_recognition') # Connect to the Database
+    #execute_query(connection, create_landmarks_table)   #Create "Landmarks" table in the database
+    
+    for i in range (1, 21): #BUG : adapt the range to the exact number of landmarks
+        add_columns = """
+        ALTER TABLE Landmarks ADD COLUMN (
+            keypoint_number%s int(6) DEFAULT NULL, 
+            keypoint_name%s varchar(100) DEFAULT NULL, 
+            x%s float(24) DEFAULT NULL, 
+            y%s float(24) DEFAULT NULL, 
+            z%s float(24) DEFAULT NULL, 
+            v%s float(24) DEFAULT NULL 
+            );"""
+        
+        #SQL query to add columns for all the landmarks coordinates
+        cursor = connection.cursor()
+        cursor.execute(add_columns, (i, i, i, i, i, i))
+        connection.commit()
+        print ("Table updated successfully")
+        #execute_query(connection, add_columns)
 
 #Creation of the CSV file where the datas will be saved
 def createfiles():
@@ -250,12 +276,17 @@ while not rospy.is_shutdown(): # 2 parts : recording phase and then training pha
 
     #Setup positions
     nbr_pos=int(input("How many position do you want to setup? (min of 2) "))
-    i=0
+    n=0
     name_position=[] #List with the names of the differents positions
-    while (i<nbr_pos):
-        i+=1
+    while (n<nbr_pos):
+        n+=1
         class_name=input("What's the name of your position ?")
         name_position.append(class_name)
+        
+        createMySQLdatabase()
+        connection = create_db_connection("localhost", "root", '', 'Gesture_recognition')   #Connecton to the database "Gesture_recognition" 
+
+        createMySQLtable()
         
         #Creation of a 5s counter
         print("The acquisition will start in 5s")
@@ -264,17 +295,22 @@ while not rospy.is_shutdown(): # 2 parts : recording phase and then training pha
         #Recognise gesture for 30 seconds with another counter
         print("Start of the acquisition")
         
-        createMySQLdatabase()
-        connection = create_db_connection("localhost", "root", '', 'Gesture_recognition')   #Connecton to the database "Gesture_recognition" 
-        
-        createMySQLtable()
-        
-        timevariable=time.time()                    #Variable where we stock time
-        while(time.time()-timevariable<30000):      #30s in milliseconds
-            var_string = ', '.join('?' * len(right_new_msg))
-            pop_landmarks = 'INSERT INTO table VALUES %s;' % var_string
-            #pop_landmarks = """ INSERT INTO Landmarks VALUES %s;""".join(right_new_msg)
-            execute_query(connection, pop_landmarks)
+        start=rospy.Time.now()                             #Variable where we stock time
+        while((rospy.Time.now()-start).to_sec()<5):
+            
+            for i in range (len(count)):
+                pop_landmarks = """INSERT INTO Landmarks (keypoint_number%s, keypoint_name%s, x%s, y%s, z%s, v%s) 
+                                    VALUES (%s, %s, %s, %s, %s, %s);"""
+                cursor = connection.cursor()
+                cursor.execute(pop_landmarks, (i, i, i, i, i, i, right_new_msg[i*6], right_new_msg[i*6+1], right_new_msg[i*6+2], right_new_msg[i*6+3], right_new_msg[i*6+4], right_new_msg[i*6+5]))
+                connection.commit()
+                print ("value inserted")
+            #pop_landmarks = 'INSERT INTO Landmarks VALUES (%s);'
+            #cursor = connection.cursor()
+            #cursor.execute(pop_landmarks, (right_new_msg))
+            #connection.commit()
+            
+            #execute_query(connection, pop_landmarks)
 
 
         print("End of the acquisition for this position")
