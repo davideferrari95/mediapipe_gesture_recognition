@@ -276,14 +276,19 @@ while not rospy.is_shutdown(): # 2 parts : recording phase and then training pha
 
     #Setup positions
     nbr_pos=int(input("How many position do you want to setup? (min of 2) "))
-    n=0
+    #n=0
     name_position=[] #List with the names of the differents positions
-    while (n<nbr_pos):
-        n+=1
+    createMySQLdatabase()
+    
+    for n in range(nbr_pos):
+    #while (n<nbr_pos):
+
+        if rospy.is_shutdown(): break
+
+        #n+=1
         class_name=input("What's the name of your position ?")
         name_position.append(class_name)
         
-        createMySQLdatabase()
         connection = create_db_connection("localhost", "root", '', 'Gesture_recognition')   #Connecton to the database "Gesture_recognition" 
 
         createMySQLtable()
@@ -296,7 +301,7 @@ while not rospy.is_shutdown(): # 2 parts : recording phase and then training pha
         print("Start of the acquisition")
         
         start=rospy.Time.now()                             #Variable where we stock time
-        while((rospy.Time.now()-start).to_sec()<5):
+        while(not rospy.is_shutdown() and (rospy.Time.now()-start).to_sec()<5):
             
             for i in range (len(count)):
                 pop_landmarks = """INSERT INTO Landmarks (keypoint_number%s, keypoint_name%s, x%s, y%s, z%s, v%s) 
@@ -305,26 +310,27 @@ while not rospy.is_shutdown(): # 2 parts : recording phase and then training pha
                 cursor.execute(pop_landmarks, (i, i, i, i, i, i, right_new_msg[i*6], right_new_msg[i*6+1], right_new_msg[i*6+2], right_new_msg[i*6+3], right_new_msg[i*6+4], right_new_msg[i*6+5]))
                 connection.commit()
                 print ("value inserted")
-            #pop_landmarks = 'INSERT INTO Landmarks VALUES (%s);'
-            #cursor = connection.cursor()
-            #cursor.execute(pop_landmarks, (right_new_msg))
-            #connection.commit()
-            
-            #execute_query(connection, pop_landmarks)
-
 
         print("End of the acquisition for this position")
 
     print('the',nbr_pos,'positions have been saved')
-
     #TRAINING PHASE : load database, 
     #train_model()
-
-    
 
     # Sleep for the Remaining Cycle Time
     rate.sleep() 
 
+    break
 
 
 
+
+# 1 finish to setup the sql for each gesture
+# try to record 3/4 gesture with only right hand
+# train gesture recognition and try it with those gestures
+
+# implement left hand, face, skeleton 
+# setup different models: right + left or right + face or face + skeleton...
+
+# record everythin: left, right, hend, skeleton
+# train different models removing datas from temp sql
