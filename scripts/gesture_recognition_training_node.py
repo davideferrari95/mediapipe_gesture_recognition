@@ -124,20 +124,18 @@ def createMySQLdatabase():
 #Creation of the MySQL table
 def createMySQLtable(name):
     #SQL query to create the table:
-    delete_table = 'DROP TABLE IF EXISTS Landmarks;'
+    delete_table = ("""DROP TABLE IF EXISTS """ + name + """;""")
     
     create_table = (
         """CREATE TABLE IF NOT EXISTS """ +
         name +
         """ (
-        id int(10) NOT NULL AUTO_INCREMENT,
         keypoint_number0 int(6) DEFAULT NULL, 
         keypoint_name0 varchar(100) DEFAULT NULL, 
         x0 float(24) DEFAULT NULL, 
         y0 float(24) DEFAULT NULL, 
         z0 float(24) DEFAULT NULL, 
-        v0 float(24) DEFAULT NULL, 
-        PRIMARY KEY(id)
+        v0 float(24) DEFAULT NULL
         ); """
     )
 
@@ -191,7 +189,7 @@ def createfiles():
         # This will create   the first line of the CSV file with on the first column the name of the class and after the (x,y,z,v) coordinates of the first landmarks, second ...
 
         landmarks = ['class']
-        for i in range (478+33+21+21+1): # BUG : The maximum value is 170
+        for i in range (33+21+21+1): # BUG : The maximum value is 170
             landmarks += ['x{}'.format(i), 'y{}'.format(i), 'z{}'.format(i), 'v{}'.format(i), 'keypoint_number{}'.format(i), 'keypoint_name{}'.format(i)]
         with open(f'/home/tanguy/tanguy_ws/src/mediapipe_gesture_recognition/CSV files/{File_Name}.csv', mode='w', newline='') as f:
             csv_writer = csv.writer(f, delimiter=',', quotechar='"', quoting= csv.QUOTE_MINIMAL)
@@ -208,6 +206,13 @@ def train_model():
     X = df.drop('class', axis=1)                                                                         # only show the features, like, only the coordinates not the class name
     y = df['class']                                                                                      # only show the target value witch is basically the class name
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1234)          #Take large random value with train and take small random value with test
+
+
+    #SQL request for the variables:
+    X = "SELECT x FROM Gesture_recognition WHERE "
+
+    #you can redirect it out to a file if you want :
+    #mysql -e "select * from myTable" -u myuser -pxxxxxxxx mydatabase > mydumpfile.txt
 
 
     # 3.2/ TRAIN MACHINE LEARNING CLASSIFICATION MODEL
@@ -277,7 +282,7 @@ while not rospy.is_shutdown(): # 2 parts : recording phase and then training pha
     connection = create_server_connection("localhost", "root", '')
 
     #Setup positions
-    nbr_pos=int(input("How many position do you want to setup? (min of 2) "))
+    nbr_pos=int(input("How many position do you want to setup? "))
     name_position_list=[]    #List with the names of the differents positions
     
     createMySQLdatabase()
@@ -303,18 +308,35 @@ while not rospy.is_shutdown(): # 2 parts : recording phase and then training pha
         
         start=rospy.Time.now()                             #Variable where we stock time
         while(not rospy.is_shutdown() and (rospy.Time.now()-start).to_sec()<5):
-            
-            for i in range (len(count)):
-                pop_landmarks = """INSERT INTO """ + position_name + """ (keypoint_number%s, keypoint_name%s, x%s, y%s, z%s, v%s) 
-                                    VALUES (%s, %s, %s, %s, %s, %s);"""
-                cursor = connection.cursor()
-                cursor.execute(pop_landmarks, (i, i, i, i, i, i, right_new_msg[i*6], right_new_msg[i*6+1], right_new_msg[i*6+2], right_new_msg[i*6+3], right_new_msg[i*6+4], right_new_msg[i*6+5]))
-                connection.commit()
-                print ("value inserted")
+            #for i in range (len(count)):
+                #pop_landmarks = """INSERT INTO """ + position_name + """ (keypoint_number%s, keypoint_name%s, x%s, y%s, z%s, v%s) 
+                #                    VALUES (%s, %s, %s, %s, %s, %s);"""
+                #cursor = connection.cursor()
+                #cursor.execute(pop_landmarks, (i, i, i, i, i, i, right_new_msg[i*6], right_new_msg[i*6+1], right_new_msg[i*6+2], right_new_msg[i*6+3], right_new_msg[i*6+4], right_new_msg[i*6+5]))
+                #connection.commit()
+                #print ("value inserted")
+
+            pop_landmarks = "INSERT INTO " + position_name + " VALUES %r;" % (tuple(right_new_msg),)
+            cursor = connection.cursor()
+            cursor.execute(pop_landmarks)
+            connection.commit()
+            print ("value inserted")
 
         print("End of the acquisition for this position")
-
+        
+        #print the content of a table:
+        Test= """SELECT * FROM pose"""
+        #Test= """SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = N'pose' """
+        cursor = connection.cursor()
+        cursor.execute(Test)
+        result = cursor.fetchall()
+        print(result)
+        #for row in result: 
+        #    print(row) 
+        #    print("\n") 
+    
     print('the',nbr_pos,'positions have been saved')
+    
     
     
     #TRAINING PHASE : load database, 
