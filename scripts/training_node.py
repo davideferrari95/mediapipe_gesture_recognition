@@ -21,8 +21,13 @@ import pickle
 import os
 import time
 from mediapipe_gesture_recognition.msg import Pose, Face, Hand
+from mediapipe_stream_node import MediapipeStreaming
+import pyarrow.parquet as pq
 import mysql.connector
 from mysql.connector import Error
+from pandas.core.frame import DataFrame
+from pandas._typing import DtypeArg
+from typing import (Any, Iterator, Sequence, cast, overload)
 
 
 # Mediapipe Subscribers Callback
@@ -52,6 +57,7 @@ def handRightCallback(data): #Have to read the datas from the topic and copy the
         right_new_msg.append(data.keypoints[i].z)
         right_new_msg.append(data.keypoints[i].v)
 
+
 def handLeftCallback(data):
     global left_new_msg 
     left_new_msg = data 
@@ -80,8 +86,7 @@ def create_server_connection(host_name, user_name, user_password):
 
     return connection
 
-def create_db_connection(host_name, user_name, user_password,db_name):
-    #exemple: connection = create_server_connection("localhost", "root", pw, "school")
+def create_db_connection(host_name, user_name, user_password,db_name):  #exemple: connection = create_server_connection("localhost", "root", pw, "school")
     connection = None
     try:
         connection = mysql.connector.connect(
@@ -96,10 +101,8 @@ def create_db_connection(host_name, user_name, user_password,db_name):
 
     return connection
 
-def create_database(connection, query):     
-    #exemple:   create_database_query = "CREATE DATABASE school"
-    #create_database(connection, create_database_query)
-    cursor = connection.cursor()
+def create_database(connection, query):     #exemple:   create_database_query = "CREATE DATABASE school"
+    cursor = connection.cursor()                       #create_database(connection, create_database_query)
     try:
         cursor.execute(query)
         print("Database created successfully")
@@ -115,11 +118,13 @@ def execute_query(connection, query):
     except Error as err:
         print(f"Error: '{err}'")
 
+#Creation of the MySQL Database
 def createMySQLdatabase():
     #SQL query to create the database:
     create_database_query = "CREATE DATABASE IF NOT EXISTS Gesture_recognition" 
     create_database(connection, create_database_query)  #Create database
 
+#Creation of the MySQL table
 def createMySQLtable(name):
     #SQL query to create the table:
     delete_table = ("""DROP TABLE IF EXISTS """ + name + """;""")
@@ -163,43 +168,12 @@ def createMySQLtable(name):
         connection.commit()
         print ("Table updated successfully")
 
-
-#Creation of the Pandas Dataframe
-def createPandasDataframe():
-    #List with the name of the columns of our Pandas Dataframe
-    global column
-    column = ['Position']
-    for i in range (0, 21):
-        column += ['Keypoint_number{}'.format(i), 'Keypoint_name{}'.format(i), 'x{}'.format(i), 'y{}'.format(i), 'z{}'.format(i), 'v{}'.format(i)]
-
-    #Creation of the Pandas Dataframe
-    global df 
-    df = pd.DataFrame(columns=column)
-
-def add_values_to_dataframe():
-    #List with the values to insert in the rows of the Pandas Dataframe
-    global insert_values
-    insert_values = []
-    insert_values.append(position_name)
-    for i in range(len(right_new_msg)):
-        insert_values.append(right_new_msg[i])
-    
-    ### concatenating df1 and df2 along rows
-    #vertical_concat = pd.concat([df1, df2], axis=0)
-    
-    ### concatenating df3 and df4 along columns
-    #horizontal_concat = pd.concat([df3, df4], axis=1)
-    
-    global df1
-    global df
-    df1 = pd.DataFrame([insert_values], columns=column)
-    df = pd.concat([df, df1])
-
-
 #Creation of the CSV file where the datas will be saved
 def createfiles():
         # Firstly I create some txt files to save the parameters of this session to use it in the following nodes
         
+
+
         # Write the different solution used on a TXT file
         Solution=""
         if (enable_right_hand=="enable"):
@@ -228,18 +202,20 @@ def createfiles():
 #3/ TRAIN CUSTOM MODEL USING SCIKIT LEARN
 def train_model():
     # 3.1/ READ IN COLLECTED DATA AND PROCESS
-    #df = pd.read_sql(Test, connection, index_col=None, coerce_float=True, params=None, parse_dates=None, columns=('x0'), chunksize=None)
-    global df
-    global df2
-    
-    df2 = df
-    df2 = df2.drop(['Position'], axis = 1)
-    for j in range (0, 21):
-        df2 = df2.drop(['Keypoint_number{}'.format(j), 'Keypoint_name{}'.format(j)], axis = 1)
+    df = pd.read_sql(Test, connection, index_col=None, coerce_float=True, params=None, parse_dates=None, columns=('x0'), chunksize=None)
+        
 
-    X = df2                                                                                              # only show the features, like, only the coordinates not the class name
-    y = df['Position']                                                                                   # only show the target value witch is basically the class name
+    df = pd.read_csv(f'/home/tanguy/tanguy_ws/src/mediapipe_gesture_recognition/CSV files/{Solution_Choice}.csv')       #read the coordinates on the CSV file 
+    X = df.drop('class', axis=1)                                                                         # only show the features, like, only the coordinates not the class name
+    y = df['class']                                                                                      # only show the target value witch is basically the class name
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1234)          #Take large random value with train and take small random value with test
+
+
+    #SQL request for the variables:
+    X = "SELECT x FROM Gesture_recognition WHERE "
+
+    #you can redirect it out to a file if you want :
+    #mysql -e "select * from myTable" -u myuser -pxxxxxxxx mydatabase > mydumpfile.txt
 
 
     # 3.2/ TRAIN MACHINE LEARNING CLASSIFICATION MODEL
@@ -265,9 +241,6 @@ def train_model():
     with open(f'/home/tanguy/tanguy_ws/src/mediapipe_gesture_recognition/PKL files/{Solution_Choice}.pkl', 'wb') as f:       #These two lines is build to export the best model "here it's rf" and save it in a files called pose_recognition.pkl
         pickle.dump(fit_models['rf'], f)
 
-    print('Model trained successfully')
-
-#Création of a Countdown
 def countdown(num_of_secs):
     while (num_of_secs!=0):
         m, s = divmod(num_of_secs, 60)
@@ -311,13 +284,11 @@ while not rospy.is_shutdown(): # 2 parts : recording phase and then training pha
     connection = create_server_connection("localhost", "root", '')
 
     #Setup positions
-    nbr_pos=int(input("How many position do you want to setup? (Minimum of 2)"))
+    nbr_pos=int(input("How many position do you want to setup? "))
     name_position_list=[]    #List with the names of the differents positions
     
     createMySQLdatabase()
     connection = create_db_connection("localhost", "root", '', 'Gesture_recognition')   #Connecton to the database "Gesture_recognition" 
-    
-    createPandasDataframe()
 
     for n in range(nbr_pos):
     #while (n<nbr_pos):
@@ -328,15 +299,16 @@ while not rospy.is_shutdown(): # 2 parts : recording phase and then training pha
         position_name=input("What's the name of your position ?")
         name_position_list.append(position_name)
 
-        #createMySQLtable(position_name)
-
+        createMySQLtable(position_name)
+        
         #Creation of a 5s counter
         print("The acquisition will start in 5s")
         countdown(5)
 
-        #Recognise gesture for 30 seconds
+        #Recognise gesture for 30 seconds with another counter
         print("Start of the acquisition")
-        start=rospy.Time.now()                  #Variable where we stock time
+        
+        start=rospy.Time.now()                             #Variable where we stock time
         while(not rospy.is_shutdown() and (rospy.Time.now()-start).to_sec()<5):
             #for i in range (len(count)):
                 #pop_landmarks = """INSERT INTO """ + position_name + """ (keypoint_number%s, keypoint_name%s, x%s, y%s, z%s, v%s) 
@@ -346,36 +318,36 @@ while not rospy.is_shutdown(): # 2 parts : recording phase and then training pha
                 #connection.commit()
                 #print ("value inserted")
 
-            #####pop_landmarks = "INSERT INTO " + position_name + " VALUES %r;" % (tuple(right_new_msg),)
-            #####cursor = connection.cursor()
-            #####cursor.execute(pop_landmarks)
-            #####connection.commit()
-            #####print ("value inserted")
-
-            add_values_to_dataframe()
+            pop_landmarks = "INSERT INTO " + position_name + " VALUES %r;" % (tuple(right_new_msg),)
+            cursor = connection.cursor()
+            cursor.execute(pop_landmarks)
+            connection.commit()
+            print ("value inserted")
 
         print("End of the acquisition for this position")
         
         #print the content of a table:
-        #Test= """SELECT * FROM pose"""
+        Test= """SELECT * FROM pose"""
         #Test= """SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = N'pose' """
         #Test= """SELECT * FROM pose WHERE DATA_TYPE = 'float' """
-        #cursor = connection.cursor()
-        #cursor.execute(Test)
-        #result = cursor.fetchall()
+        cursor = connection.cursor()
+        cursor.execute(Test)
+        result = cursor.fetchall()
+        df = pd.read_sql(Test, index_col=None, coerce_float=True, params=None, parse_dates=None, columns=None, chunksize=None)
+        print(df)
         #print(result)
         #for row in result: 
         #    print(row) 
-        #    print("\n")
-
-    print('The',nbr_pos,'positions have been saved')
-    print(df)
+        #    print("\n") 
     
-    #########
+    print('the',nbr_pos,'positions have been saved')
+    
+    
+    ##########create a table in a table
 
 
     #TRAINING PHASE : load database, 
-    train_model()
+    #train_model()
 
     # Sleep for the Remaining Cycle Time
     rate.sleep() 
@@ -386,9 +358,8 @@ while not rospy.is_shutdown(): # 2 parts : recording phase and then training pha
 
 
 # 1 finish to setup the sql for each gesture                                        OK
-# create a table in a table
 # try to record 3/4 gesture with only right hand                                    
-# train gesture recognition and try it with those gestures                         
+# train gesture recognition and try it with those gestures                          
 
 # implement left hand, face, skeleton                                               
 # setup different models: right + left or right + face or face + skeleton...        
