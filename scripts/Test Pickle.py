@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy, rospkg
-import time
+import os, time
 import pandas as pd, pickle
 
 # Import Mediapipe Messages
@@ -62,8 +62,12 @@ def msg2dict(dict, right_hand, left_hand, pose, face):
 
 def saveGesture(data_dictionary, name):
     
+    save_path = f'{package_path}/database/PKL'
+    
+    if not os.path.exists(save_path): os.makedirs(save_path) 
+    
     # Save Dict Object with Pickle
-    with open(f'{package_path}/database/PKL/{name}.pkl', 'wb') as savefile:
+    with open(f'{save_path}/{name}.pkl', 'wb') as savefile:
         pickle.dump(data_dictionary, savefile, protocol = pickle.HIGHEST_PROTOCOL)
         # print(data_dictionary)
 
@@ -85,6 +89,26 @@ def loadGesture(name):
         
         print(f'ERROR: Failed to Load Gesture "{name}"')
         return False
+
+def debugPrint(data_dictionary):
+    
+    # Print All Dictionary
+    print(data_dictionary)
+    
+    # Process All Keys in a Dictionary
+    for key in data_dictionary: 
+        
+        # Print All Data of a Message
+        print(data_dictionary[key])
+        
+        # Print Each Dataframe
+        print('\nRight Hand:\n', data_dictionary[key]['Right Hand'])
+        print('\nLeft Hand:\n', data_dictionary[key]['Left Hand'])
+        print('\nPose:\n', data_dictionary[key]['Pose'])
+        print('\nFace:\n', data_dictionary[key]['Face'])
+        
+        # Access to Each Data in 'Right Hand' Dataframe
+        print('\nRight Hand:\n', data_dictionary[key]['Right Hand'].loc[0])
 
 def countdown(num_of_secs):
     
@@ -125,14 +149,16 @@ while not rospy.is_shutdown() and recording_phase:
     # Gesture Labeling
     gesture_name = input("\nInsert Gesture Name: ")
 
+    # DEBUG: Increase Counter to 5
     # Start Counter
     print("\nAcquisition Starts in:")
-    countdown(5)
+    countdown(1)
     print("\nSTART\n")    
     
+    # DEBUG: Increase Acquisition Time to 30
     # Starting Time
     start = rospy.Time.now()         
-    ACQUISITION_TIME = 10
+    ACQUISITION_TIME = 1/30
     
     # Recognise gesture for 30 seconds with another counter
     while(not rospy.is_shutdown() and (rospy.Time.now() - start).to_sec() < ACQUISITION_TIME):
@@ -140,10 +166,12 @@ while not rospy.is_shutdown() and recording_phase:
         # Add Incoming Messages to Dataframe
         data = msg2dict(data, right_new_msg, left_new_msg, pose_new_msg, face_new_msg)
         
+        rospy.loginfo_throttle(1, f'Recording...  {int(ACQUISITION_TIME - (rospy.Time.now() - start).to_sec())}')
+        
         # Sleep for the Remaining Cycle Time (30 FPS)
         rate.sleep()
             
-    print("End of The Acquisition, Saving...")
+    print("\nEnd of The Acquisition, Saving...")
     
     # Save Gesture Recorded Data
     saveGesture(data, gesture_name)
