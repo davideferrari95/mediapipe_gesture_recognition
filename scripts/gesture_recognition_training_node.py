@@ -120,7 +120,7 @@ def debugPrint(data_dictionary):
         # Access to Each Data in 'Right Hand' Dataframe
         print('\nRight Hand:\n', data_dictionary[key]['Right Hand'].loc[0])
 
-
+#Transform the saved dictionary with the landmarks coordinates in a Dataframes that can be read by the training model
 def adapt_dictionary(dictionary, name_position):
 
     list_landmarks = []     #'Right Hand', 'Left Hand', 'Pose' and/or 'Face'
@@ -132,8 +132,8 @@ def adapt_dictionary(dictionary, name_position):
         list_landmarks.append('Left Hand')
     if enable_pose==True:
         list_landmarks.append('Pose')
-    if enable_pose==True:
-        list_landmarks.append('Face')
+    #if enable_pose==True:
+    #    list_landmarks.append('Face')
     
     for part in list_landmarks:
         print (part)
@@ -176,7 +176,17 @@ def adapt_dictionary(dictionary, name_position):
     #    ### concatenating df3 and df4 along columns
     #    #horizontal_concat = pd.concat([df3, df4], axis=1)
 
-    concat_df = pd.concat(list_df, axis =1)     #df_right_hand, df_left_hand, df_pose, df_face
+    
+    concat_df = pd.concat(list_df, axis =1)         #df_right_hand, df_left_hand, df_pose, df_face
+    
+    #list_position=[]
+    #for i in range (len(concat_df)):
+    #    list_position.append(name_position)
+    #list_position = pd.DataFrame (list_position)
+    #print(list_position)   
+    #concat_df = pd.concat([concat_df, list_position], axis=0)
+    #print (concat_df)    
+    
     list_position=[]
     for i in range (len(concat_df)):
         list_position.append(name_position)
@@ -186,7 +196,7 @@ def adapt_dictionary(dictionary, name_position):
     return concat_df
 
 #3/ TRAIN CUSTOM MODEL USING SCIKIT LEARN
-def train_model(name):
+def train_model():
     # Obtain the files for the positions saved  
     Saved_positions = [f for f in listdir(f'{package_path}/database/PKL/') if isfile(join(f'{package_path}/database/PKL/', f))]
     
@@ -197,17 +207,31 @@ def train_model(name):
         df = adapt_dictionary(position_dictionary, Saved_positions[i])
         list_df_fragments.append(df)
     df = pd.concat(list_df_fragments, axis =0)
+    
+    list_renamed_columns = ['Position']
+    x = int((len(df.columns)-1)/4)
+    for i in range(x):
+        list_renamed_columns += ['x{}'.format(i), 'y{}'.format(i), 'z{}'.format(i), 'v{}'.format(i)]
+    print(list_renamed_columns)
+    df.columns=[list_renamed_columns]
     print (df)
-
+    
     # 3.1/ READ IN COLLECTED DATA AND PROCESS  
-    X = df.drop(['Position'], axis = 1)                                                                # only show the features, like, only the coordinates not the class name
-    y = df['Position']                                                                                  # only show the target value witch is basically the class name
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1234)         #Take large random value with train and take small random value with test
+    X = df.drop(['Position'], axis = 1)                                                                     # only show the features, like, only the coordinates not the class name
+    y = df['Position']                                                                                      # only show the target value witch is basically the class name
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1234)             #Take large random value with train and take small random value with test
 
+
+
+    
+
+
+
+    
 
     # 3.2/ TRAIN MACHINE LEARNING CLASSIFICATION MODEL
 
-    pipelines = {                                                                                         #Create different pipelines, here you have 4 different machine learning model, later we will choose the best one
+    pipelines = {                                                                                           #Create different pipelines, here you have 4 different machine learning model, later we will choose the best one
         'lr':make_pipeline(StandardScaler(), LogisticRegression()),
         'rc':make_pipeline(StandardScaler(), RidgeClassifier()),
         'rf':make_pipeline(StandardScaler(), RandomForestClassifier()),
@@ -217,18 +241,15 @@ def train_model(name):
     fit_models = {}                         
     for algo, pipeline in pipelines.items():
         model = pipeline.fit(X_train, y_train)
-        fit_models[algo] = model                                                                          #this 4 lines is to run the automatic learning
+        fit_models[algo] = model                                                                            #this 4 lines is to run the automatic learning
 
     # 3.3/ EVALUATE AN SERIALIZE MODEL
 
     for algo, model in fit_models.items():
         yhat = model.predict(X_test)
-        print(algo, accuracy_score(y_test, yhat))                                                            #These line is to predict and showed the precision of the 4 pipelines, to choose witch one is the preciser
+        print(algo, accuracy_score(y_test, yhat))                                                           #These line is to predict and showed the precision of the 4 pipelines, to choose witch one is the preciser
 
-    #with open(f'/home/tanguy/tanguy_ws/src/mediapipe_gesture_recognition/PKL files/{Solution_Choice}.pkl', 'wb') as f:       #These two lines is build to export the best model "here it's rf" and save it in a files called pose_recognition.pkl
-    #    pickle.dump(fit_models['rf'], f)
-
-    with open(f'{package_path}/trained_models/{name}.pkl', 'wb') as savefile:
+    with open(f'{package_path}/trained_models/trained_model.pkl', 'wb') as savefile:                        #These two lines is build to export the best model "here it's rf" and save it in a files called trained_model.pkl
         pickle.dump(fit_models['rf'], savefile, protocol = pickle.HIGHEST_PROTOCOL)
         # print(data_dictionary)
     
@@ -310,7 +331,6 @@ while not rospy.is_shutdown() and recording_phase:
 
 # TRAINING PHASE 
 if not rospy.is_shutdown() and training_phase:
-    trainning_name = input("\nWhat is the name of this trainning: ")
-    train_model(trainning_name)
-    #...
+    train_model()
+    
     
