@@ -29,7 +29,12 @@ left_new_msg = Hand()
 pose_new_msg = Pose()
 face_new_msg = Face()
 
-# Mediapipe Subscribers Callback
+
+############################################################
+#                    Callback Functions                    #
+############################################################
+
+
 def handRightCallback(data):
     global right_new_msg
     right_new_msg = data
@@ -47,6 +52,11 @@ def FaceCallback(data):
     face_new_msg = data
 
 
+############################################################
+#                Recording phase functions                 #
+############################################################
+
+
 def createDataFrame(msg):
     
     # Initialize Message Table
@@ -58,7 +68,6 @@ def createDataFrame(msg):
     df = pd.DataFrame(table, columns=['Keypoint Number', 'Keypoint Name', 'x', 'y', 'z', 'visibility'])
     
     return df
-
 
 def msg2dict(dict, right_hand, left_hand, pose, face):
     
@@ -73,32 +82,24 @@ def msg2dict(dict, right_hand, left_hand, pose, face):
     
     return dict
 
-
 def saveGesture(data_dictionary, name):
-    
+    global gesture_file
+    gesture_file = ''
+    if enable_right_hand_ == True :
+        gesture_file = gesture_file + "Right"
+    if enable_left_hand_== True:
+        gesture_file = gesture_file + "Left"
+    if enable_pose_== True:
+        gesture_file = gesture_file + "Pose"
+    if enable_face_ == True:
+        gesture_file = gesture_file + "Face"
+
     # Save Dict Object with Pickle
-    with open(f'{package_path}/database/PKL/{name}.pkl', 'wb') as savefile:
+    with open(f'{package_path}/database/Gestures/{gesture_file}/{name}.pkl', 'wb') as savefile:
         pickle.dump(data_dictionary, savefile, protocol = pickle.HIGHEST_PROTOCOL)
         # print(data_dictionary)
 
     print('Gesture Saved')
-
-def loadGesture(name):
-        
-    try:
-            
-        # Read Dict Object with Pickle
-        with open(f'{package_path}/database/PKL/{name}', 'rb') as inputfile:
-            reading = pickle.load(inputfile)
-            #print(reading)
-
-            print(f'Gesture "{name}" Loaded')
-            return reading
-    
-    except: 
-        
-        print(f'ERROR: Failed to Load Gesture "{name}"')
-        return False
 
 def debugPrint(data_dictionary):
     
@@ -120,20 +121,50 @@ def debugPrint(data_dictionary):
         # Access to Each Data in 'Right Hand' Dataframe
         print('\nRight Hand:\n', data_dictionary[key]['Right Hand'].loc[0])
 
-#Transform the saved dictionary with the landmarks coordinates in a Dataframes that can be read by the training model
+def countdown(num_of_secs):
+    
+    while (not rospy.is_shutdown() and num_of_secs!=0):
+        m, s = divmod(num_of_secs, 60)
+        min_sec_format = '{:02d}:{:02d}'.format(m, s)
+        print(min_sec_format)
+        time.sleep(1)
+        num_of_secs -= 1
+
+
+############################################################
+#                  Training phase functions                #
+############################################################
+
+
+def loadGesture(name):
+        
+    try:
+            
+        # Read Dict Object with Pickle
+        with open(f'{package_path}/database/Gestures/{gesture_file}/{name}', 'rb') as inputfile:
+            reading = pickle.load(inputfile)
+            #print(reading)
+
+            print(f'Gesture "{name}" Loaded')
+            return reading
+    
+    except: 
+        
+        print(f'ERROR: Failed to Load Gesture "{name}"')
+        return False
+
 def adapt_dictionary(dictionary, name_position):
 
     list_landmarks = []     #'Right Hand', 'Left Hand', 'Pose' and/or 'Face'
     list_df=[]              #list with the related dfs (df_right_hand, df_left_hand, df_pose and/or df_face)
-    
-    if enable_right_hand ==True :
+    if enable_right_hand_ ==True :
         list_landmarks.append('Right Hand')
-    if enable_left_hand==True:
+    if enable_left_hand_==True:
         list_landmarks.append('Left Hand')
-    if enable_pose==True:
+    if enable_pose_==True:
         list_landmarks.append('Pose')
-    #if enable_pose==True:
-    #    list_landmarks.append('Face')
+    if enable_face_==True:
+        list_landmarks.append('Face')
     
     for part in list_landmarks:
         print (part)
@@ -179,26 +210,23 @@ def adapt_dictionary(dictionary, name_position):
     
     concat_df = pd.concat(list_df, axis =1)         #df_right_hand, df_left_hand, df_pose, df_face
     
+    list_position=[]
+    list_position = [name_position] * len((concat_df))
+    list_position = pd.DataFrame (list_position)
+    concat_df = list_position.join(concat_df, how='right')
+  
+    
     #list_position=[]
     #for i in range (len(concat_df)):
     #    list_position.append(name_position)
-    #list_position = pd.DataFrame (list_position)
-    #print(list_position)   
-    #concat_df = pd.concat([concat_df, list_position], axis=0)
-    #print (concat_df)    
-    
-    list_position=[]
-    for i in range (len(concat_df)):
-        list_position.append(name_position)
-    concat_df.insert(0, 'Position', list_position)
-    print (concat_df)
+    #concat_df.insert(0, 'Position', list_position)
+    #print (concat_df)
     
     return concat_df
 
-#3/ TRAIN CUSTOM MODEL USING SCIKIT LEARN
 def train_model():
     # Obtain the files for the positions saved  
-    Saved_positions = [f for f in listdir(f'{package_path}/database/PKL/') if isfile(join(f'{package_path}/database/PKL/', f))]
+    Saved_positions = [f for f in listdir(f'{package_path}/database/Gestures/{gesture_file}/') if isfile(join(f'{package_path}/database/Gestures/{gesture_file}/', f))]
     
     #Create a Dataframe with the values of all the positions saved
     list_df_fragments =[]
@@ -212,7 +240,6 @@ def train_model():
     x = int((len(df.columns)-1)/4)
     for i in range(x):
         list_renamed_columns += ['x{}'.format(i), 'y{}'.format(i), 'z{}'.format(i), 'v{}'.format(i)]
-    print(list_renamed_columns)
     df.columns=[list_renamed_columns]
     print (df)
     
@@ -220,14 +247,6 @@ def train_model():
     X = df.drop(['Position'], axis = 1)                                                                     # only show the features, like, only the coordinates not the class name
     y = df['Position']                                                                                      # only show the target value witch is basically the class name
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1234)             #Take large random value with train and take small random value with test
-
-
-
-    
-
-
-
-    
 
     # 3.2/ TRAIN MACHINE LEARNING CLASSIFICATION MODEL
 
@@ -249,22 +268,18 @@ def train_model():
         yhat = model.predict(X_test)
         print(algo, accuracy_score(y_test, yhat))                                                           #These line is to predict and showed the precision of the 4 pipelines, to choose witch one is the preciser
 
-    with open(f'{package_path}/trained_models/trained_model.pkl', 'wb') as savefile:                        #These two lines is build to export the best model "here it's rf" and save it in a files called trained_model.pkl
+    with open(f'{package_path}/database/Gestures/{gesture_file}/trained_model.pkl', 'wb') as savefile:                        #These two lines is build to export the best model "here it's rf" and save it in a files called trained_model.pkl
         pickle.dump(fit_models['rf'], savefile, protocol = pickle.HIGHEST_PROTOCOL)
         # print(data_dictionary)
     
     
     print('Model trained successfully')
 
-def countdown(num_of_secs):
-    
-    while (not rospy.is_shutdown() and num_of_secs!=0):
-        m, s = divmod(num_of_secs, 60)
-        min_sec_format = '{:02d}:{:02d}'.format(m, s)
-        print(min_sec_format)
-        time.sleep(1)
-        num_of_secs -= 1
-        
+
+############################################################
+#                    ROS Initialization                    #
+############################################################
+
 
 # ROS Initialization
 rospy.init_node('mediapipe_gesture_recognition_training_node', anonymous=True) 
@@ -277,16 +292,22 @@ rospy.Subscriber('/mediapipe_gesture_recognition/pose', Pose, PoseCallback)
 rospy.Subscriber('/mediapipe_gesture_recognition/face', Face, FaceCallback)
 
 # Read Mediapipe Modules Parameters
-enable_right_hand = rospy.get_param('enable_right_hand', False)
-enable_left_hand = rospy.get_param('enable_left_hand', False)
-enable_pose = rospy.get_param('enable_pose', False)
-enable_face = rospy.get_param('enable_face', False)
+enable_right_hand_ = rospy.get_param('enable_right_hand', False)
+enable_left_hand_ = rospy.get_param('enable_left_hand', False)
+enable_pose_ = rospy.get_param('enable_pose', False)
+enable_face_ = rospy.get_param('enable_face', False)
 
 # Read Training Parameters
 recording_phase = rospy.get_param('recording', True)
 training_phase = rospy.get_param('training', False)
 
-# RECORDING PHASE
+
+############################################################
+#                           Main                           #
+############################################################
+
+
+###     RECORDING PHASE     ###
 while not rospy.is_shutdown() and recording_phase:
 
     # DataFrames Dictionary Initialization
@@ -329,8 +350,7 @@ while not rospy.is_shutdown() and recording_phase:
         break
         
 
-# TRAINING PHASE 
+
+###     TRAINING PHASE     ###
 if not rospy.is_shutdown() and training_phase:
     train_model()
-    
-    
