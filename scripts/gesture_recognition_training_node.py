@@ -312,10 +312,10 @@ while not rospy.is_shutdown() and recording_phase:
 
     # DataFrames Dictionary Initialization
     data = {} 
-
+    
     # Gesture Labeling
     gesture_name = input("\nInsert Gesture Name: ")
-
+    print(pose_new_msg)
     # Start Counter
     print("\nAcquisition Starts in:")
     countdown(5)
@@ -353,4 +353,4 @@ while not rospy.is_shutdown() and recording_phase:
 
 ###     TRAINING PHASE     ###
 if not rospy.is_shutdown() and training_phase:
-    train_model()
+    train_model
