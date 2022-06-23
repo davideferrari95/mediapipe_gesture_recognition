@@ -62,7 +62,7 @@ def create_folders(gesture):
 
     for sequence in range(no_sequences):
         try: 
-            os.makedirs(os.path.join(f'{package_path}/database/3D_Gestures/', gesture, str(sequence)))
+            os.makedirs(os.path.join(f'{package_path}/database/3D_Gestures/{gesture_file}/', gesture, str(sequence)))
         except:
             pass
     
@@ -79,13 +79,11 @@ def store_videos(gesture):
         time.sleep(2)
         print("Starting collection")
 
-
-
         # Loop through video length aka sequence length
         for frame_num in range(sequence_length):
             # Export keypoints values in the correct folder
             keypoints = extract_keypoints(pose_new_msg, face_new_msg, left_new_msg, right_new_msg)
-            npy_path = os.path.join(f'{package_path}/database/3D_Gestures/', gesture, str(sequence), str(frame_num))
+            npy_path = os.path.join(f'{package_path}/database/3D_Gestures/{gesture_file}/', gesture, str(sequence), str(frame_num))
             np.save(npy_path, keypoints)
         print("End collection")
 
@@ -110,7 +108,7 @@ def train_3D_model():
     from sklearn.model_selection import train_test_split
     from keras.utils import to_categorical
 
-    actions = [f for f in listdir(f'{package_path}/database/3D_Gestures/') if isdir(join(f'{package_path}/database/3D_Gestures/', f))]
+    actions = [f for f in listdir(f'{package_path}/database/3D_Gestures/{gesture_file}/') if isdir(join(f'{package_path}/database/3D_Gestures/{gesture_file}/', f))]
     actions = np.array(actions)
     print (actions)
     
@@ -121,7 +119,7 @@ def train_3D_model():
         for sequence in range(no_sequences):
             window = []
             for frame_num in range(sequence_length):
-                res = np.load(os.path.join(f'{package_path}/database/3D_Gestures/', action, str(sequence), "{}.npy".format(frame_num)))
+                res = np.load(os.path.join(f'{package_path}/database/3D_Gestures/{gesture_file}/', action, str(sequence), "{}.npy".format(frame_num)))
                 window.append(res)
             sequences.append(window)
             labels.append(label_map[action])
@@ -135,20 +133,23 @@ def train_3D_model():
     y = to_categorical(labels).astype(int)
 
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
-    print(X_test.shape)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1)
+    print(X_test.shape[2])
     print(y_test.shape)
 
     # Neural network with tensorflow
     from keras.models import Sequential
     from keras.layers import LSTM, Dense
     from keras.callbacks import TensorBoard
+    from keras.callbacks import EarlyStopping
 
     log_dir = os.path.join('Logs')
     tb_callback = TensorBoard(log_dir=log_dir)
 
+    early_stopping = EarlyStopping()
+
     model = Sequential()
-    model.add(LSTM(64, return_sequences=True, activation='relu', input_shape=(30,1692)))
+    model.add(LSTM(64, return_sequences=True, activation='relu', input_shape=(30,X_test.shape[2])))
     model.add(LSTM(128, return_sequences=True, activation='relu'))
     model.add(LSTM(64, return_sequences=False, activation='relu'))
 
@@ -157,15 +158,15 @@ def train_3D_model():
     model.add(Dense(actions.shape[0], activation='softmax'))
 
     model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['categorical_accuracy'])
+    
     #Add the callback and in the callback we can add the dropout
-
     #Dropout
     #Early stopping
 
 
-    model.fit(X_train, y_train, epochs=1000, callbacks=[tb_callback])     #Diminuer le nombre epochs pour accelerer la vitesse de training (200 par exemple)
+    model.fit(X_train, y_train, epochs=40, callbacks=[tb_callback, early_stopping])     #Diminuer le nombre epochs pour accelerer la vitesse de training (200 par exemple)
     
-    with open(f'{package_path}/database/3D_Gestures/trained_model.pkl', 'wb') as savefile:          #Save the model in a files called trained_model.pkl
+    with open(f'{package_path}/database/3D_Gestures/{gesture_file}/trained_model.pkl', 'wb') as savefile:          #Save the model in a files called trained_model.pkl
         pickle.dump(model, savefile, protocol = pickle.HIGHEST_PROTOCOL)
 
 
@@ -205,11 +206,20 @@ sequence_length = 30
 #                           Main                           #
 ############################################################
 
+gesture_file = ''
+if enable_right_hand_ == True :
+    gesture_file = gesture_file + "Right"
+if enable_left_hand_== True:
+    gesture_file = gesture_file + "Left"
+if enable_pose_== True:
+    gesture_file = gesture_file + "Pose"
+if enable_face_ == True:
+    gesture_file = gesture_file + "Face"
 
 ###     RECORDING PHASE     ###
 while not rospy.is_shutdown() and recording_phase:
     
-    #train_3D_model()
+    train_3D_model()
     
     # Gesture Labeling
     gesture_name = input("\nInsert Gesture Name: ")

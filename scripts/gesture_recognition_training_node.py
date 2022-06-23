@@ -200,15 +200,9 @@ def adapt_dictionary(dictionary, name_position):
         if (part == 'Face'):
             df_face = df
             list_df.append(df_face)
-    
-    #    ### concatenating df1 and df2 along rows
-    #    #vertical_concat = pd.concat([df1, df2], axis=0)
-    #
-    #    ### concatenating df3 and df4 along columns
-    #    #horizontal_concat = pd.concat([df3, df4], axis=1)
 
     
-    concat_df = pd.concat(list_df, axis =1)         #df_right_hand, df_left_hand, df_pose, df_face
+    concat_df = pd.concat(list_df, axis =1)
     
     list_position=[]
     list_position = [name_position] * len((concat_df))
