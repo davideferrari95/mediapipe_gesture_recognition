@@ -319,7 +319,7 @@ while not rospy.is_shutdown() and recording_phase:
     start = rospy.Time.now()         
     ACQUISITION_TIME = 10
     
-    # Recognise gesture for 30 seconds with another counter
+    # Recognise gesture for "ACQUISITION_TIME" seconds with another counter
     while(not rospy.is_shutdown() and (rospy.Time.now() - start).to_sec() < ACQUISITION_TIME):
 
         # Add Incoming Messages to Dataframe

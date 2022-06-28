@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+#Global imports
 import os
 import rospy, rospkg
 import time
@@ -56,37 +57,40 @@ def extract_keypoints(pose_msg, face_msg, left_msg, right_msg):
     rh = np.array([[res.x, res.y, res.z] for res in right_msg.keypoints]).flatten() if right_new_msg else np.zeros(21*3)
     return np.concatenate([pose, face, lh, rh])
 
-#Create a folder with 30 videos for each gesture
-#Crée un fichier pour chaque geste contenant chacun un fichier pour chaque vidéeo d'entrainement prises
+#Create a folder for each gesture, this folder contains folders for each videos we will record
 def create_folders(gesture):
-
     for sequence in range(no_sequences):
         try: 
             os.makedirs(os.path.join(f'{package_path}/database/3D_Gestures/{gesture_file}/', gesture, str(sequence)))
         except:
             pass
-    
 
-#Crée une boucle qui permet l'enregistrement de chaque vidéo pour chaque geste avec une pause entre chaque vidéo
-#Possiblement séparer le code afin de l'intégrer dans le code de training directement à chaque geste enregistré
-#Chaque vidéo est composée de 30 images qui sont stockées sous la forme d'un tableau de une ligne avec les valeurs de chaque landmark
+#Create a loop to save the landmarks coordinates for each frame of the video (each video is made of the number of frames defined in the variable "sequence_length")
+#Then loop to save all the videos for the gesture (the number of videos for training is defined by the variable "no_sequences")
 def store_videos(gesture):
     # Loop through sequences aka videos
     for sequence in range(no_sequences):
-
-
-        print("Collecting frames for {}  Video Number {}".format(gesture, sequence))
-        time.sleep(2)
+        print("\nCollecting frames for {}  Video Number {}".format(gesture, sequence))
+        print("Collection starting in 2 seconds")
+        countdown(2)
         print("Starting collection")
-
+        start = rospy.get_time() 
+        
         # Loop through video length aka sequence length
         for frame_num in range(sequence_length):
             # Export keypoints values in the correct folder
             keypoints = extract_keypoints(pose_new_msg, face_new_msg, left_new_msg, right_new_msg)
             npy_path = os.path.join(f'{package_path}/database/3D_Gestures/{gesture_file}/', gesture, str(sequence), str(frame_num))
             np.save(npy_path, keypoints)
+            time.sleep(1/30)            #To have 30 frames/s
+        
+        end= rospy.get_time() 
+        acquisition_time = end-start
+        print ("Lenght of the acquisition : ", acquisition_time)
         print("End collection")
+        time.sleep(1)
 
+#Create a countdown (the duration of the countdown will be defined by the variable "num_of_seconds")
 def countdown(num_of_secs):
     
     while (not rospy.is_shutdown() and num_of_secs!=0):
@@ -133,9 +137,10 @@ def train_3D_model():
     y = to_categorical(labels).astype(int)
 
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
     print(X_test.shape[2])
     print(y_test.shape)
+
 
     # Neural network with tensorflow
     from keras.models import Sequential
@@ -163,10 +168,10 @@ def train_3D_model():
     #Dropout
     #Early stopping
 
-
-    model.fit(X_train, y_train, epochs=40, callbacks=[tb_callback, early_stopping])     #Diminuer le nombre epochs pour accelerer la vitesse de training (200 par exemple)
+    model.fit(X_train, y_train, epochs=200, callbacks=[tb_callback, early_stopping])
     
-    with open(f'{package_path}/database/3D_Gestures/{gesture_file}/trained_model.pkl', 'wb') as savefile:          #Save the model in a files called trained_model.pkl
+    #Save the model in a file called trained_model.pkl
+    with open(f'{package_path}/database/3D_Gestures/{gesture_file}/trained_model.pkl', 'wb') as savefile:
         pickle.dump(model, savefile, protocol = pickle.HIGHEST_PROTOCOL)
 
 
@@ -206,6 +211,8 @@ sequence_length = 30
 #                           Main                           #
 ############################################################
 
+
+#Save witch part of the body is being detected
 gesture_file = ''
 if enable_right_hand_ == True :
     gesture_file = gesture_file + "Right"
@@ -216,11 +223,13 @@ if enable_pose_== True:
 if enable_face_ == True:
     gesture_file = gesture_file + "Face"
 
+
 ###     RECORDING PHASE     ###
+
 while not rospy.is_shutdown() and recording_phase:
     
     train_3D_model()
-    
+
     # Gesture Labeling
     gesture_name = input("\nInsert Gesture Name: ")
 
@@ -230,7 +239,6 @@ while not rospy.is_shutdown() and recording_phase:
     # Start Counter
     print("\nAcquisition Starts in:")
     countdown(5)
-    print("\nSTART\n")    
     
     #Tape and save videos
     store_videos(gesture_name)
@@ -247,7 +255,7 @@ while not rospy.is_shutdown() and recording_phase:
         break
         
 
-
 ###     TRAINING PHASE     ###
+
 if not rospy.is_shutdown() and training_phase:
     train_3D_model()
