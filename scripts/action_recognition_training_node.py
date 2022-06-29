@@ -137,36 +137,38 @@ def train_3D_model():
     y = to_categorical(labels).astype(int)
 
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1)
     print(X_test.shape[2])
     print(y_test.shape)
 
 
     # Neural network with tensorflow
+    from tensorflow import keras
     from keras.models import Sequential
-    from keras.layers import LSTM, Dense
+    from keras.layers import LSTM, Dense, Dropout
     from keras.callbacks import TensorBoard
     from keras.callbacks import EarlyStopping
 
     log_dir = os.path.join('Logs')
     tb_callback = TensorBoard(log_dir=log_dir)
 
-    early_stopping = EarlyStopping()
+    early_stopping = EarlyStopping(monitor = 'loss', patience = 15)
 
     model = Sequential()
     model.add(LSTM(64, return_sequences=True, activation='relu', input_shape=(30,X_test.shape[2])))
+    model.add(Dropout(0.5))
     model.add(LSTM(128, return_sequences=True, activation='relu'))
+    model.add(Dropout(0.5))
     model.add(LSTM(64, return_sequences=False, activation='relu'))
-
+    model.add(Dropout(0.5))
+    
     model.add(Dense(64, activation='relu'))
+    model.add(Dropout(0.5))
     model.add(Dense(32, activation='relu'))
+    model.add(Dropout(0.5))
     model.add(Dense(actions.shape[0], activation='softmax'))
 
     model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['categorical_accuracy'])
-    
-    #Add the callback and in the callback we can add the dropout
-    #Dropout
-    #Early stopping
 
     model.fit(X_train, y_train, epochs=200, callbacks=[tb_callback, early_stopping])
     
@@ -203,8 +205,8 @@ training_phase = rospy.get_param('training', False)
 # Number of videos worth of data
 no_sequences = 30
 
-# Number of frames for each videos (30 frames in lenght there)
-sequence_length = 30
+# Number of frames for each videos (30 frames/s) * lenght of the video in seconds
+sequence_length = 30*1
 
 
 ############################################################

@@ -3,6 +3,7 @@
 import rospy, rospkg
 import numpy as np
 import pandas as pd, pickle
+import time
 
 # Obtain name of files from a directory
 from os import listdir
@@ -130,4 +131,5 @@ print(actions)
 sequence = []
 
 while not rospy.is_shutdown():
-        Recognition()
+    time.sleep(1/30)
+    Recognition()
