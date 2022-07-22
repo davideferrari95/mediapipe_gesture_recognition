@@ -52,50 +52,24 @@ class GestureRecognition2D:
     def PoseCallback(self, data):      self.pose_new_msg  = data
     def FaceCallback(self, data):      self.face_new_msg  = data
 
+    # Gesture Recognition Fuction
     def Recognition(self):
         
         # Create a List with the Detected Landmarks Coordinates
         Landmarks = []
         
         # Loop Until Landmarks Found
-        while Landmarks == [] and not rospy.is_shutdown():
-            
-            # Check Right Hand Landmarks
-            if (self.enable_right_hand == True and hasattr(self, 'right_new_msg')):
-                
-                # Process All Landmarks
-                for i in range (len(self.right_new_msg.keypoints)):
-                    
-                    Landmarks.extend([self.right_new_msg.keypoints[i].x, self.right_new_msg.keypoints[i].y, 
-                                      self.right_new_msg.keypoints[i].z, self.right_new_msg.keypoints[i].v])
-
-            # Check Left Hand Landmarks
-            if (self.enable_left_hand == True and hasattr(self, 'left_new_msg')):
-                
-                # Process All Landmarks
-                for i in range (len(self.left_new_msg.keypoints)):
-                    
-                    Landmarks.extend([self.left_new_msg.keypoints[i].x, self.left_new_msg.keypoints[i].y, 
-                                      self.left_new_msg.keypoints[i].z, self.left_new_msg.keypoints[i].v])
-
-            # Check Pose Landmarks
-            if (self.enable_pose == True and hasattr(self, 'pose_new_msg')):
-                
-                # Process All Landmarks
-                for i in range (len(self.pose_new_msg.keypoints)):
-                
-                    Landmarks.extend([self.pose_new_msg.keypoints[i].x, self.pose_new_msg.keypoints[i].y, 
-                                      self.pose_new_msg.keypoints[i].z, self.pose_new_msg.keypoints[i].v])
-
-            # Check Face Landmarks
-            if (self.enable_face == True and hasattr(self, 'face_new_msg')):
-                
-                # Process All Landmarks
-                for i in range (len(self.face_new_msg.keypoints)):
-
-                    Landmarks.extend([self.face_new_msg.keypoints[i].x, self.face_new_msg.keypoints[i].y, 
-                                      self.face_new_msg.keypoints[i].z, self.face_new_msg.keypoints[i].v])
+        while Landmarks == []:
         
+            # Exit if ROS Shutdown
+            if rospy.is_shutdown(): exit()
+            
+            # Check [Right Hand, Left Hand, Pose, Face] Landmarks
+            Landmarks = self.process_landmarks(self.enable_right_hand, 'right_new_msg', Landmarks)
+            Landmarks = self.process_landmarks(self.enable_left_hand,  'left_new_msg',  Landmarks)
+            Landmarks = self.process_landmarks(self.enable_pose, 'pose_new_msg', Landmarks)
+            Landmarks = self.process_landmarks(self.enable_face, 'face_new_msg', Landmarks)
+            
         # Prediction with the Trained Model
         X = pd.DataFrame([Landmarks])
         pose_recognition_name = self.model.predict(X)[0]
@@ -105,6 +79,27 @@ class GestureRecognition2D:
         Prob = max(pose_recognition_prob)
         if (Prob > self.recognition_precision_probability): print(pose_recognition_name)
 
+    # Process Landmark Messages Fuction
+    def process_landmarks(self, enable, message_name, Landmarks):
+        
+        # Check Landmarks Existance 
+        if (enable == True and hasattr(self, message_name)):
+            
+            # Get Message Variable Name
+            message = getattr(self, message_name)
+            
+            # Process All Landmarks
+            for i in range (len(message.keypoints)):
+                
+                # Extend Landmark Vector -> Saving New Keypoints
+                Landmarks.extend([message.keypoints[i].x, message.keypoints[i].y, 
+                                  message.keypoints[i].z, message.keypoints[i].v])
+            
+            # Delete Class Attribute -> Delete Message
+            delattr(self, message_name)
+    
+        return Landmarks    
+        
 
 ############################################################
 #                           Main                           #
