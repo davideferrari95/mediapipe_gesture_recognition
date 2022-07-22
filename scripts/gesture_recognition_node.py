@@ -2,129 +2,123 @@
 
 import rospy, rospkg
 import pandas as pd 
-import pickle 
-import time
+import pickle, warnings
+
+# Ignore Pickle Warnings
+warnings.filterwarnings("ignore", category=UserWarning)
 
 from mediapipe_gesture_recognition.msg import Pose, Face, Hand
 
-# Get Package Path
-package_path = rospkg.RosPack().get_path('mediapipe_gesture_recognition')
+class GestureRecognition2D:
+      
+    def __init__(self):
+        
+        # ROS Initialization
+        rospy.init_node('mediapipe_gesture_recognition_training_node', anonymous=True) 
+        self.rate = rospy.Rate(30)
 
-############################################################
-#                    Callback Functions                    #
-############################################################
+        # Mediapipe Subscribers
+        rospy.Subscriber('/mediapipe_gesture_recognition/right_hand', Hand, self.RightHandCallback)
+        rospy.Subscriber('/mediapipe_gesture_recognition/left_hand',  Hand, self.LeftHandCallback)
+        rospy.Subscriber('/mediapipe_gesture_recognition/pose',       Pose, self.PoseCallback)
+        rospy.Subscriber('/mediapipe_gesture_recognition/face',       Face, self.FaceCallback)
 
+        # Read Mediapipe Modules Parameters
+        self.enable_right_hand = rospy.get_param('enable_right_hand', False)
+        self.enable_left_hand  = rospy.get_param('enable_left_hand',  False)
+        self.enable_pose = rospy.get_param('enable_pose', False)
+        self.enable_face = rospy.get_param('enable_face', False)
+        
+        # Read Gesture Recognition Precision Probability Parameter
+        self.recognition_precision_probability = rospy.get_param('recognition_precision_probability', 0.8)
 
-def handRightCallback(data):
-    global right_new_msg
-    right_new_msg = data
+        # Get Package Path
+        package_path = rospkg.RosPack().get_path('mediapipe_gesture_recognition')
+        
+        # Choose Gesture File
+        gesture_file = ''
+        if self.enable_right_hand == True: gesture_file += "Right"
+        if self.enable_left_hand  == True: gesture_file += "Left"
+        if self.enable_pose       == True: gesture_file += "Pose"
+        if self.enable_face       == True: gesture_file += "Face"
+        
+        # Load the Trained Model for the Detected Landmarks
+        with open(f'{package_path}/database/Gestures/{gesture_file}/trained_model.pkl', 'rb') as f:
+            self.model = pickle.load(f) 
 
-def handLeftCallback(data):
-    global left_new_msg 
-    left_new_msg = data
+    # Callback Functions
+    def RightHandCallback(self, data): self.right_new_msg = data
+    def LeftHandCallback(self, data):  self.left_new_msg  = data
+    def PoseCallback(self, data):      self.pose_new_msg  = data
+    def FaceCallback(self, data):      self.face_new_msg  = data
 
-def PoseCallback(data):
-    global pose_new_msg 
-    pose_new_msg = data
+    def Recognition(self):
+        
+        # Create a List with the Detected Landmarks Coordinates
+        Landmarks = []
+        
+        # Loop Until Landmarks Found
+        while Landmarks == [] and not rospy.is_shutdown():
+            
+            # Check Right Hand Landmarks
+            if (self.enable_right_hand == True and hasattr(self, 'right_new_msg')):
+                
+                # Process All Landmarks
+                for i in range (len(self.right_new_msg.keypoints)):
+                    
+                    Landmarks.extend([self.right_new_msg.keypoints[i].x, self.right_new_msg.keypoints[i].y, 
+                                      self.right_new_msg.keypoints[i].z, self.right_new_msg.keypoints[i].v])
 
-def FaceCallback(data):
-    global face_new_msg
-    face_new_msg = data
+            # Check Left Hand Landmarks
+            if (self.enable_left_hand == True and hasattr(self, 'left_new_msg')):
+                
+                # Process All Landmarks
+                for i in range (len(self.left_new_msg.keypoints)):
+                    
+                    Landmarks.extend([self.left_new_msg.keypoints[i].x, self.left_new_msg.keypoints[i].y, 
+                                      self.left_new_msg.keypoints[i].z, self.left_new_msg.keypoints[i].v])
 
+            # Check Pose Landmarks
+            if (self.enable_pose == True and hasattr(self, 'pose_new_msg')):
+                
+                # Process All Landmarks
+                for i in range (len(self.pose_new_msg.keypoints)):
+                
+                    Landmarks.extend([self.pose_new_msg.keypoints[i].x, self.pose_new_msg.keypoints[i].y, 
+                                      self.pose_new_msg.keypoints[i].z, self.pose_new_msg.keypoints[i].v])
 
-############################################################
-#                     Countdown function                   #
-############################################################
+            # Check Face Landmarks
+            if (self.enable_face == True and hasattr(self, 'face_new_msg')):
+                
+                # Process All Landmarks
+                for i in range (len(self.face_new_msg.keypoints)):
 
+                    Landmarks.extend([self.face_new_msg.keypoints[i].x, self.face_new_msg.keypoints[i].y, 
+                                      self.face_new_msg.keypoints[i].z, self.face_new_msg.keypoints[i].v])
+        
+        # Prediction with the Trained Model
+        X = pd.DataFrame([Landmarks])
+        pose_recognition_name = self.model.predict(X)[0]
+        pose_recognition_prob = self.model.predict_proba(X)[0]
 
-def countdown(num_of_secs):
-    
-    while (not rospy.is_shutdown() and num_of_secs!=0):
-        m, s = divmod(num_of_secs, 60)
-        min_sec_format = '{:02d}:{:02d}'.format(m, s)
-        print(min_sec_format)
-        time.sleep(1)
-        num_of_secs -= 1
-
-
-############################################################
-#                       Main Spinner                       #
-############################################################
-
-
-def Recognition ():
-    #Load the trained model for the detected landmarks
-    with open(f'{package_path}/database/Gestures/{gesture_file}/trained_model.pkl', 'rb') as f:
-        model = pickle.load(f) 
-
-    #Create a list with the detected landmarks coordinates
-    Landmarks = []
-    while Landmarks == []:
-        if (enable_right_hand_ == True and 'right_new_msg' in globals()):
-            for i in range (len(right_new_msg.keypoints)):
-                Landmarks.extend([right_new_msg.keypoints[i].x, right_new_msg.keypoints[i].y, right_new_msg.keypoints[i].z, right_new_msg.keypoints[i].v])
-
-        if (enable_left_hand_ == True and 'left_new_msg' in globals()):
-            for i in range (len(left_new_msg.keypoints)):
-                Landmarks.extend([left_new_msg.keypoints[i].x, left_new_msg.keypoints[i].y, left_new_msg.keypoints[i].z, left_new_msg.keypoints[i].v])
-
-        if (enable_pose_ == True and 'pose_new_msg' in globals()):
-            for i in range (len(pose_new_msg.keypoints)):
-                Landmarks.extend([pose_new_msg.keypoints[i].x, pose_new_msg.keypoints[i].y, pose_new_msg.keypoints[i].z, pose_new_msg.keypoints[i].v])
-
-        if (enable_face_ == True and 'face_new_msg' in globals()):
-            for i in range (len(face_new_msg.keypoints)):
-                Landmarks.extend([face_new_msg.keypoints[i].x, face_new_msg.keypoints[i].y, face_new_msg.keypoints[i].z, face_new_msg.keypoints[i].v])
-
-    
-    #Prediction with the trained model
-    X = pd.DataFrame([Landmarks])
-    pose_recognition_class = model.predict(X)[0]
-    pose_recognition_prob = model.predict_proba(X)[0]
-
-    
-    #Print the gesture recognised
-    Prob=max(pose_recognition_prob)
-    if (Prob>0.7):
-        print(pose_recognition_class)
-
-
-############################################################
-#                    ROS Initialization                    #
-############################################################
-
-
-# ROS Initialization
-rospy.init_node('mediapipe_gesture_recognition_training_node', anonymous=True) 
-rate = rospy.Rate(30)
-
-# Mediapipe Subscribers
-rospy.Subscriber('/mediapipe_gesture_recognition/right_hand', Hand, handRightCallback)
-rospy.Subscriber('/mediapipe_gesture_recognition/left_hand', Hand, handLeftCallback)
-rospy.Subscriber('/mediapipe_gesture_recognition/pose', Pose, PoseCallback)
-rospy.Subscriber('/mediapipe_gesture_recognition/face', Face, FaceCallback)
-
-# Read Mediapipe Modules Parameters
-enable_right_hand_ = rospy.get_param('enable_right_hand', False)
-enable_left_hand_ = rospy.get_param('enable_left_hand', False)
-enable_pose_ = rospy.get_param('enable_pose', False)
-enable_face_ = rospy.get_param('enable_face', False)
+        # Print the Recognised Gesture 
+        Prob = max(pose_recognition_prob)
+        if (Prob > self.recognition_precision_probability): print(pose_recognition_name)
 
 
 ############################################################
 #                           Main                           #
 ############################################################
 
-
-gesture_file = ''
-if enable_right_hand_ ==True :
-    gesture_file = gesture_file + "Right"
-if enable_left_hand_==True:
-    gesture_file = gesture_file + "Left"
-if enable_pose_==True:
-    gesture_file = gesture_file + "Pose"
-if enable_face_==True:
-    gesture_file = gesture_file + "Face"
-
-while not rospy.is_shutdown():
-        Recognition()
+if __name__ == "__main__":
+    
+    # Instantiate Gesture Recognition Class
+    Recognition = GestureRecognition2D()
+    
+    while not rospy.is_shutdown():
+        
+        # Main Recognition Function
+        Recognition.Recognition()
+        
+        # Sleep Rate Time
+        Recognition.rate.sleep()
