@@ -355,12 +355,14 @@ def initROS(name, rate):
   global objectron_model_;        objectron_model_        = rospy.get_param('objectron_model', 'Shoe')
   
   # Debug Print
-  print('Enable right_hand:', enable_right_hand_)
-  print('Enable left_hand:', enable_left_hand_)
-  print('Enable pose:', enable_pose_)
-  print('Enable face:', enable_face_)
-  print('Enable face_detection:', enable_face_detection_)
-  print('Enable objectron:', enable_objectron_)
+  from termcolor import colored
+  print(colored(f'\nFunctions Enabled:\n', 'yellow'))
+  print(colored(f'  Right Hand: {enable_right_hand_}',  'green' if enable_right_hand_ else 'red'))
+  print(colored(f'  Left  Hand: {enable_left_hand_}\n', 'green' if enable_left_hand_  else 'red'))
+  print(colored(f'  Skeleton:   {enable_pose_}',        'green' if enable_pose_ else 'red'))
+  print(colored(f'  Face Mesh:  {enable_face_}\n',      'green' if enable_face_ else 'red'))
+  print(colored(f'  Objectron:       {enable_objectron_}',        'green' if enable_objectron_      else 'red'))
+  print(colored(f'  Face Detection:  {enable_face_detection_}\n', 'green' if enable_face_detection_ else 'red'))
   
 ############################################################
 #                           Main                           #

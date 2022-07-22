@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 
-import rospy
+import rospy, rospkg
 import pandas as pd 
 import pickle 
 import time
 
 from mediapipe_gesture_recognition.msg import Pose, Face, Hand
+
+# Get Package Path
+package_path = rospkg.RosPack().get_path('mediapipe_gesture_recognition')
 
 ############################################################
 #                    Callback Functions                    #
@@ -51,7 +54,7 @@ def countdown(num_of_secs):
 
 def Recognition ():
     #Load the trained model for the detected landmarks
-    with open(f'/home/tanguy/tanguy_ws/src/mediapipe_gesture_recognition/database/Gestures/{gesture_file}/trained_model.pkl', 'rb') as f:
+    with open(f'{package_path}/database/Gestures/{gesture_file}/trained_model.pkl', 'rb') as f:
         model = pickle.load(f) 
 
     #Create a list with the detected landmarks coordinates

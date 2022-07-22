@@ -100,7 +100,6 @@ include_directories(
 
 install(PROGRAMS 
   scripts/mediapipe_stream_node.py
-  scripts/modified_mediapipe_stream_node.py
   scripts/gesture_recognition_node.py
   scripts/gesture_recognition_training_node.py
   scripts/action_recognition_training_node.py

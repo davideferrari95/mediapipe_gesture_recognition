@@ -120,7 +120,7 @@ if enable_face_ == True:
     gesture_file = gesture_file + "Face"
 
 #Load the trained model for the detected landmarks
-with open(f'/home/tanguy/tanguy_ws/src/mediapipe_gesture_recognition/database/3D_Gestures/{gesture_file}/trained_model.pkl', 'rb') as f:
+with open(f'{package_path}/database/3D_Gestures/{gesture_file}/trained_model.pkl', 'rb') as f:
     model = pickle.load(f)
 
 #Load the names of the actions saved
