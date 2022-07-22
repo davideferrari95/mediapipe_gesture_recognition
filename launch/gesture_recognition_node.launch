@@ -1,0 +1,12 @@
+<launch>
+
+    <!-- Recognition Precision Arg -->
+    <arg name="precision_probability" default="0.8"/>
+    
+    <!-- Recognition Precision Param -->
+    <param name="precision_probability" value="$(arg precision_probability)"/>
+
+    <!-- Mediapipe Gesture Recognition Node -->
+    <node pkg="mediapipe_gesture_recognition" type="gesture_recognition_node.py" name="gesture_recognition_node" output="screen"/>
+
+</launch>
