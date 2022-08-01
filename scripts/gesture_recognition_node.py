@@ -37,10 +37,10 @@ class GestureRecognition2D:
         
         # Choose Gesture File
         gesture_file = ''
-        if self.enable_right_hand == True: gesture_file += "Right"
-        if self.enable_left_hand  == True: gesture_file += "Left"
-        if self.enable_pose       == True: gesture_file += "Pose"
-        if self.enable_face       == True: gesture_file += "Face"
+        if self.enable_right_hand: gesture_file += "Right"
+        if self.enable_left_hand:  gesture_file += "Left"
+        if self.enable_pose:       gesture_file += "Pose"
+        if self.enable_face:       gesture_file += "Face"
         
         # Load the Trained Model for the Detected Landmarks
         with open(f'{package_path}/database/Gestures/{gesture_file}/trained_model.pkl', 'rb') as f:
@@ -108,12 +108,12 @@ class GestureRecognition2D:
 if __name__ == "__main__":
     
     # Instantiate Gesture Recognition Class
-    Recognition = GestureRecognition2D()
+    GR = GestureRecognition2D()
     
     while not rospy.is_shutdown():
         
         # Main Recognition Function
-        Recognition.Recognition()
+        GR.Recognition()
         
         # Sleep Rate Time
-        Recognition.rate.sleep()
+        GR.rate.sleep()
