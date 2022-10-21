@@ -2,134 +2,130 @@
 
 import rospy, rospkg
 import numpy as np
-import pandas as pd, pickle
-import time
+import pickle, warnings
 
-# Obtain name of files from a directory
+# Obtain Name of Files From a Directory
 from os import listdir
 from os.path import join, isdir
+
+# Ignore Pickle Warnings
+warnings.filterwarnings("ignore", category=UserWarning)
 
 # Import Mediapipe Messages
 from mediapipe_gesture_recognition.msg import Pose, Face, Hand
 
-# Get Package Path
-package_path = rospkg.RosPack().get_path('mediapipe_gesture_recognition')
+class GestureRecognition3D:
+      
+    def __init__(self):
 
-
-############################################################
-#                    Callback Functions                    #
-############################################################
-
-
-def handRightCallback(data):
-    global right_new_msg
-    right_new_msg = data
-
-def handLeftCallback(data):
-    global left_new_msg 
-    left_new_msg = data
-
-def PoseCallback(data):
-    global pose_new_msg 
-    pose_new_msg = data
-
-def FaceCallback(data):
-    global face_new_msg
-    face_new_msg = data
-
-
-############################################################
-#                       Main Spinner                       #
-############################################################
-
-
-def Recognition ():
-    global sequence
-
-    coordinates = []
-    if (enable_pose_ == True and 'pose_new_msg' in globals()):
-        pose = np.array([[res.x, res.y, res.z, res.v] for res in pose_new_msg.keypoints]).flatten() if pose_new_msg else np.zeros(33*4)
-        coordinates.append(pose)
-    
-    if (enable_face_ == True and 'face_new_msg' in globals()):
-        face = np.array([[res.x, res.y, res.z] for res in face_new_msg.keypoints]).flatten() if face_new_msg else np.zeros(468*3)
-        coordinates.append(face)
-    
-    if (enable_left_hand_ == True and 'left_new_msg' in globals()):    
-        lh = np.array([[res.x, res.y, res.z] for res in left_new_msg.keypoints]).flatten() if left_new_msg else np.zeros(21*3)
-        coordinates.append(lh)
-    
-    if (enable_right_hand_ == True and 'right_new_msg' in globals()):
-        rh = np.array([[res.x, res.y, res.z] for res in right_new_msg.keypoints]).flatten() if right_new_msg else np.zeros(21*3)
-        coordinates.append(rh)
-
-    keypoints = np.concatenate(coordinates)
-
-    # Prediction logic
-    sequence.append(keypoints)        #Append the landmarks coordinates from the last frame to our sequence
-    sequence = sequence[-30:]         #Permits to always analyse only the last 30 frames of the webcam to have a real time recognition without stops
-
-    if len(sequence) == 30:
+        # ROS Initialization
+        rospy.init_node('mediapipe_gesture_recognition_training_node', anonymous=True)
+        self.rate = rospy.Rate(30)
         
-        # Obtain the probability of each gesture
-        res = model.predict(np.expand_dims(sequence, axis=0))[0]
-        #print (res)
-        #print (np.argmax(res))
+        # Mediapipe Subscribers
+        rospy.Subscriber('/mediapipe_gesture_recognition/right_hand', Hand, self.RightHandCallback)
+        rospy.Subscriber('/mediapipe_gesture_recognition/left_hand',  Hand, self.LeftHandCallback)
+        rospy.Subscriber('/mediapipe_gesture_recognition/pose',       Pose, self.PoseCallback)
+        rospy.Subscriber('/mediapipe_gesture_recognition/face',       Face, self.FaceCallback)
         
-        #Print the name of the gesture recognised
-        Prob = np.amax(res)
-        if (Prob>0.7):    
-            print(actions[np.argmax(res)])
+        # Read Mediapipe Modules Parameters
+        self.enable_right_hand = rospy.get_param('enable_right_hand', False)
+        self.enable_left_hand  = rospy.get_param('enable_left_hand',  False)
+        self.enable_pose = rospy.get_param('enable_pose', False)
+        self.enable_face = rospy.get_param('enable_face', False)
+ 
+        # Read Gesture Recognition Precision Probability Parameter
+        self.recognition_precision_probability = rospy.get_param('recognition_precision_probability', 0.8)
+
+        # Number of Consecutive Frames Needed to Make our Prediction
+        self.sequence = []
+ 
+        # Get Package Path
+        package_path = rospkg.RosPack().get_path('mediapipe_gesture_recognition')
+        
+        # Choose Gesture File
+        gesture_file = ''
+        if self.enable_right_hand: gesture_file += "Right"
+        if self.enable_left_hand:  gesture_file += "Left"
+        if self.enable_pose:       gesture_file += "Pose"
+        if self.enable_face:       gesture_file += "Face"
+        
+        # Load the Trained Model for the Detected Landmarks
+        with open(f'{package_path}/database/3D_Gestures/{gesture_file}/trained_model.pkl', 'rb') as f:
+            self.model = pickle.load(f)
+            
+        # Load the Names of the Saved Actions
+        self.actions = np.array([f for f in listdir(f'{package_path}/database/3D_Gestures/{gesture_file}/') if isdir(join(f'{package_path}/database/3D_Gestures/{gesture_file}/', f))])
+        # print(self.actions)
 
 
-############################################################
-#                    ROS Initialization                    #
-############################################################
+    # Callback Functions
+    def RightHandCallback(self, data): self.right_new_msg = data
+    def LeftHandCallback(self, data):  self.left_new_msg  = data
+    def PoseCallback(self, data):      self.pose_new_msg  = data
+    def FaceCallback(self, data):      self.face_new_msg  = data
 
 
-# ROS Initialization
-rospy.init_node('mediapipe_gesture_recognition_training_node', anonymous=True) 
-rate = rospy.Rate(30)
+    # Gesture Recognition Fuction
+    def Recognition(self):
 
-# Mediapipe Subscribers
-rospy.Subscriber('/mediapipe_gesture_recognition/right_hand', Hand, handRightCallback)
-rospy.Subscriber('/mediapipe_gesture_recognition/left_hand', Hand, handLeftCallback)
-rospy.Subscriber('/mediapipe_gesture_recognition/pose', Pose, PoseCallback)
-rospy.Subscriber('/mediapipe_gesture_recognition/face', Face, FaceCallback)
+        # Coordinate Vector
+        Landmarks = []
+        
+        # Check [Right Hand, Left Hand, Pose, Face] Landmarks
+        Landmarks = self.process_landmarks(self.enable_right_hand, 'right_new_msg', Landmarks)
+        Landmarks = self.process_landmarks(self.enable_left_hand,  'left_new_msg',  Landmarks)
+        Landmarks = self.process_landmarks(self.enable_pose, 'pose_new_msg', Landmarks)
+        Landmarks = self.process_landmarks(self.enable_face, 'face_new_msg', Landmarks)
+        
+        # Concatenate Landmarks Vectors
+        keypoints = np.concatenate(Landmarks)
 
-# Read Mediapipe Modules Parameters
-enable_right_hand_ = rospy.get_param('enable_right_hand', False)
-enable_left_hand_ = rospy.get_param('enable_left_hand', False)
-enable_pose_ = rospy.get_param('enable_pose', False)
-enable_face_ = rospy.get_param('enable_face', False)
+        # Append the Landmarks Coordinates from the Last Frame to our Sequence
+        self.sequence.append(keypoints)
+        
+        # Analyse Only the Last 30 Frames
+        self.sequence = self.sequence[-30:]
 
+        if len(self.sequence) == 30:
+            
+            # Obtain the Probability of Each Gesture
+            prob = self.model.predict(np.expand_dims(self.sequence, axis=0))[0]
+            
+            # Print the Name of the Gesture Recognised
+            if (np.amax(prob) > self.recognition_precision_probability):
+                print(self.actions[np.argmax(prob)])
+
+    # Process Landmark Messages Fuction
+    def process_landmarks(self, enable, message_name, Landmarks):
+        
+        # Check Landmarks Existance 
+        if (enable == True and hasattr(self, message_name)):
+            
+            # Get Message Variable Name
+            message = getattr(self, message_name)
+            
+            # Extend Landmark Vector -> Saving New Keypoints
+            Landmarks.append(np.array([[value.x, value.y, value.z, value.v]
+                            for value in message.keypoints]).flatten() \
+                            if message else np.zeros(33*4))
+
+        return Landmarks
 
 ############################################################
 #                           Main                           #
 ############################################################
 
-#Save witch part of the body is being detected
-gesture_file = ''
-if enable_right_hand_ == True :
-    gesture_file = gesture_file + "Right"
-if enable_left_hand_== True:
-    gesture_file = gesture_file + "Left"
-if enable_pose_== True:
-    gesture_file = gesture_file + "Pose"
-if enable_face_ == True:
-    gesture_file = gesture_file + "Face"
 
-#Load the trained model for the detected landmarks
-with open(f'{package_path}/database/3D_Gestures/{gesture_file}/trained_model.pkl', 'rb') as f:
-    model = pickle.load(f)
-
-#Load the names of the actions saved
-actions = np.array([f for f in listdir(f'{package_path}/database/3D_Gestures/{gesture_file}/') if isdir(join(f'{package_path}/database/3D_Gestures/{gesture_file}/', f))])
-print(actions)
-
-#We define the variable where we will store the number of consecutive frames needed to make our prediction
-sequence = []
-
-while not rospy.is_shutdown():
-    time.sleep(1/30)
-    Recognition()
+if __name__ == "__main__":
+    
+    # Instantiate Gesture Recognition Class
+    GR = GestureRecognition3D()
+    
+    while not rospy.is_shutdown():
+        
+        # Main Recognition Function
+        GR.Recognition()
+        
+        # Sleep Rate Time
+        GR.rate.sleep()
