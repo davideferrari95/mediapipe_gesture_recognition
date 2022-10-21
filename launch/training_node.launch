@@ -1,0 +1,11 @@
+<launch>
+    <!-- 2D / 3D Recognition Agr -->
+    <arg name="3D_gesture_recognition" default="True"/>
+    
+    <!-- Mediapipe 2D Gesture Recognition Training Node -->
+    <node unless="$(arg 3D_gesture_recognition)" pkg="mediapipe_gesture_recognition" type="2D_training_node.py" name="2D_training_node" output="screen"/>
+
+    <!-- Mediapipe 3D Gesture Recognition Training Node -->
+    <node if="$(arg 3D_gesture_recognition)"     pkg="mediapipe_gesture_recognition" type="3D_training_node.py" name="3D_training_node" output="screen"/>
+
+</launch>
