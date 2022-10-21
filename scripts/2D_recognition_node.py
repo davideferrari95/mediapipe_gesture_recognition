@@ -7,6 +7,7 @@ import pickle, warnings
 # Ignore Pickle Warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
+# Import Mediapipe Messages
 from mediapipe_gesture_recognition.msg import Pose, Face, Hand
 
 class GestureRecognition2D:
@@ -43,14 +44,16 @@ class GestureRecognition2D:
         if self.enable_face:       gesture_file += "Face"
         
         # Load the Trained Model for the Detected Landmarks
-        with open(f'{package_path}/database/Gestures/{gesture_file}/trained_model.pkl', 'rb') as f:
+        with open(f'{package_path}/database/2D_Gestures/{gesture_file}/trained_model.pkl', 'rb') as f:
             self.model = pickle.load(f) 
+
 
     # Callback Functions
     def RightHandCallback(self, data): self.right_new_msg = data
     def LeftHandCallback(self, data):  self.left_new_msg  = data
     def PoseCallback(self, data):      self.pose_new_msg  = data
     def FaceCallback(self, data):      self.face_new_msg  = data
+
 
     # Gesture Recognition Fuction
     def Recognition(self):
@@ -98,7 +101,7 @@ class GestureRecognition2D:
             # Delete Class Attribute -> Delete Message
             delattr(self, message_name)
     
-        return Landmarks    
+        return Landmarks
         
 
 ############################################################
