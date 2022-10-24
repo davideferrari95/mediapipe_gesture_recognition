@@ -100,9 +100,9 @@ include_directories(
 
 install(PROGRAMS 
   scripts/mediapipe_stream_node.py
-  scripts/gesture_recognition_node.py
-  scripts/gesture_recognition_training_node.py
-  scripts/action_recognition_training_node.py
-  scripts/action_recognition_node.py
+  scripts/2D_training_node.py
+  scripts/2D_recognition_node.py
+  scripts/3D_training_node.py
+  scripts/3D_recognition_node.py
   DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}
 )
