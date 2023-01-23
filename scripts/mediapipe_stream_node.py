@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import rospy
 import cv2
 import mediapipe as mp
@@ -52,7 +50,7 @@ class MediapipeStreaming:
                                  'RIGHT_EYE', 'RIGHT_EYE_OUTER', 'LEFT_EAR', 'RIGHT_EAR', 'MOUTH_LEFT', 'MOUTH_RIGHT', 
                                  'LEFT_SHOULDER', 'RIGHT_SHOULDER', 'LEFT_ELBOW', 'RIGHT_ELBOW', 'LEFT_WRIST', 
                                  'RIGHT_WRIST', 'LEFT_PINKY', 'RIGHT_PINKY', 'LEFT_INDEX', 'RIGHT_INDEX', 'LEFT_THUMB', 
-                                 'RIGHT_TUMB', 'LEFT_HIP', 'RIGHT_HIP', 'LEFT_KNEE', 'RIGHT_KNEE', 'LEFT_ANKLE', 
+                                 'RIGHT_THUMB', 'LEFT_HIP', 'RIGHT_HIP', 'LEFT_KNEE', 'RIGHT_KNEE', 'LEFT_ANKLE', 
                                  'RIGHT_ANKLE', 'LEFT_HEEL', 'RIGHT_HEEL', 'LEFT_FOOT_INDEX', 'RIGHT_FOOT_INDEX']
     
     # Define Objectron Model Names
@@ -96,14 +94,14 @@ class MediapipeStreaming:
   
   def newKeypoint(self, landmark, number, name):
     
-    # Assing Keypoint Coordinates
+    # Assign Keypoint Coordinates
     new_keypoint = Keypoint()
     new_keypoint.x = landmark.x
     new_keypoint.y = landmark.y
     new_keypoint.z = landmark.z
     new_keypoint.v = landmark.visibility
 
-    # Assing Keypoint Number and Name
+    # Assign Keypoint Number and Name
     new_keypoint.keypoint_number = number
     new_keypoint.keypoint_name = name
     
@@ -188,16 +186,16 @@ class MediapipeStreaming:
       # Add Keypoints to Face Message
       for i in range(len(faceResults.face_landmarks.landmark)):
 
-        # Assing Keypoint Coordinates
+        # Assign Keypoint Coordinates
         new_keypoint = Keypoint()
         new_keypoint.x = faceResults.face_landmarks.landmark[i].x
         new_keypoint.y = faceResults.face_landmarks.landmark[i].y
         new_keypoint.z = faceResults.face_landmarks.landmark[i].z
 
-        # Assing Keypoint Number
+        # Assign Keypoint Number
         new_keypoint.keypoint_number = i
 
-        # Assing Keypoint Name (468 Landmarks -> Names = FACE_KEYPOINT_1 ...)
+        # Assign Keypoint Name (468 Landmarks -> Names = FACE_KEYPOINT_1 ...)
         new_keypoint.keypoint_name = f'FACE_KEYPOINT_{i+1}'
 
         # Append Keypoint
@@ -280,10 +278,10 @@ class MediapipeStreaming:
     # Process Right Hand Landmarks
     if self.enable_right_hand: self.processHand(self.RIGHT_HAND, self.holistic_results, image)
 
-    # Process Pose Landmakrs
+    # Process Pose Landmarks
     if self.enable_pose: self.processPose(self.holistic_results, image)
       
-    # Process Face Landmakrs
+    # Process Face Landmarks
     if self.enable_face: self.processFace(self.holistic_results, image)
       
     # Process Face Detection
@@ -308,7 +306,7 @@ class MediapipeStreaming:
       success, image = self.cap.read()
       
       if not success:
-        print("Ignoring empty camera frame.")
+        print('Ignoring empty camera frame.')
         # If loading a video, use 'break' instead of 'continue'.
         continue
 
@@ -368,7 +366,7 @@ def initROS(name, rate):
 #                           Main                           #
 ############################################################
   
-if __name__ == "__main__":
+if __name__ == '__main__':
   
   initROS('mediapipe_stream_node', 30)
       
