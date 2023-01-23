@@ -1,0 +1,81 @@
+####################################  MEDIAPIPE  ###################################
+
+alias check_video_0='if test -c "/dev/video0"; then echo "/dev/video0 exists"; else echo "/dev/video0 does not exists"; fi'
+alias check_video_2='if test -c "/dev/video2"; then echo "/dev/video2 exists"; else echo "/dev/video2 does not exists"; fi'
+alias switch_camera_external='echo 'daddo-.-95' | sudo -S ls && clear && if test -c "/dev/video2"; 
+							  then (if test -c "/dev/video0"; then sudo mv video0 video0.bak; fi) && sudo mv video2 video0 && echo "camera changed to external webcam";
+							  else echo "no external webcam found on /dev/video2"; fi'
+alias switch_camera_internal='echo 'daddo-.-95' | sudo -S ls && clear && if test -c "/dev/video0.bak"; 
+							  then (if test -c "/dev/video0"; then sudo mv video0 video2; fi) && sudo mv video0.bak video0 && echo "camera changed to internal webcam";
+							  else echo "internal webcam already on /dev/video0"; fi'
+
+alias mediapipe_folder='cd /home/davide/davide_ws/src/Mindful/gesture_recognition/mediapipe'
+
+# Face Detection
+alias mediapipe_build_face_detection_gpu='mediapipe_folder && bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/face_detection:face_detection_gpu'
+alias mediapipe_run_face_detection_gpu='mediapipe_folder && GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/face_detection/face_detection_gpu --calculator_graph_config_file=mediapipe/graphs/face_detection/face_detection_mobile_gpu.pbtxt'
+alias mediapipe_build_face_detection_cpu='mediapipe_folder && bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/face_detection:face_detection_cpu'
+alias mediapipe_run_face_detection_cpu='mediapipe_folder && bazel-bin/mediapipe/examples/desktop/face_detection/face_detection_cpu --calculator_graph_config_file=mediapipe/graphs/face_detection/face_detection_desktop_live.pbtxt'
+
+# Face Mesh
+alias mediapipe_build_face_mesh_gpu='mediapipe_folder && bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/face_mesh:face_mesh_gpu'
+alias mediapipe_run_face_mesh_gpu='mediapipe_folder && GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/face_mesh/face_mesh_gpu --calculator_graph_config_file=mediapipe/graphs/face_mesh/face_mesh_desktop_live_gpu.pbtxt'
+alias mediapipe_build_face_mesh_cpu='mediapipe_folder && bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/face_mesh:face_mesh_cpu'
+alias mediapipe_run_face_mesh_cpu='mediapipe_folder && bazel-bin/mediapipe/examples/desktop/face_mesh/face_mesh_cpu --calculator_graph_config_file=mediapipe/graphs/face_mesh/face_mesh_desktop_live.pbtxt'
+
+# Iris Tracking
+alias mediapipe_build_iris_tracking_gpu='mediapipe_folder && bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/iris_tracking:iris_tracking_gpu'
+alias mediapipe_run_iris_tracking_gpu='mediapipe_folder && GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/iris_tracking/iris_tracking_gpu --calculator_graph_config_file=mediapipe/graphs/iris_tracking/iris_tracking_gpu.pbtxt'
+alias mediapipe_build_iris_tracking_cpu='mediapipe_folder && bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/iris_tracking:iris_tracking_cpu'
+alias mediapipe_run_iris_tracking_cpu='mediapipe_folder && bazel-bin/mediapipe/examples/desktop/iris_tracking/iris_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/iris_tracking/iris_tracking_cpu.pbtxt'
+
+# Hand Tracking
+alias mediapipe_build_hand_tracking_gpu='mediapipe_folder && bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/hand_tracking:hand_tracking_gpu'
+alias mediapipe_run_hand_tracking_gpu='mediapipe_folder && GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/hand_tracking/hand_tracking_gpu --calculator_graph_config_file=mediapipe/graphs/hand_tracking/hand_tracking_desktop_live_gpu.pbtxt'
+alias mediapipe_build_hand_tracking_cpu='mediapipe_folder && bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/hand_tracking:hand_tracking_cpu'
+alias mediapipe_run_hand_tracking_cpu='mediapipe_folder && bazel-bin/mediapipe/examples/desktop/hand_tracking/hand_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/hand_tracking/hand_tracking_desktop_live.pbtxt'
+
+# Pose
+alias mediapipe_build_pose_tracking_gpu='mediapipe_folder && bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/pose_tracking:pose_tracking_gpu'
+alias mediapipe_run_pose_tracking_gpu='mediapipe_folder && GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/pose_tracking/pose_tracking_gpu --calculator_graph_config_file=mediapipe/graphs/pose_tracking/pose_tracking_gpu.pbtxt'
+alias mediapipe_build_pose_tracking_cpu='mediapipe_folder && bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/pose_tracking:pose_tracking_cpu'
+alias mediapipe_run_pose_tracking_cpu='mediapipe_folder && bazel-bin/mediapipe/examples/desktop/pose_tracking/pose_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/pose_tracking/pose_tracking_cpu.pbtxt'
+
+# Pose - Upper-Body Only
+alias mediapipe_build_upper_pose_tracking_gpu='mediapipe_folder && bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/upper_body_pose_tracking:upper_body_pose_tracking_gpu'
+alias mediapipe_run_upper_pose_tracking_gpu='mediapipe_folder && GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/upper_body_pose_tracking/upper_body_pose_tracking_gpu --calculator_graph_config_file=mediapipe/graphs/pose_tracking/upper_body_pose_tracking_gpu.pbtxt'
+alias mediapipe_build_upper_pose_tracking_cpu='mediapipe_folder && bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/upper_body_pose_tracking:upper_body_pose_tracking_cpu'
+alias mediapipe_run_upper_pose_tracking_cpu='mediapipe_folder && bazel-bin/mediapipe/examples/desktop/upper_body_pose_tracking/upper_body_pose_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/pose_tracking/upper_body_pose_tracking_cpu.pbtxt'
+
+# Holistic
+alias mediapipe_build_holistic_gpu='mediapipe_folder && bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/holistic_tracking:holistic_tracking_gpu'
+alias mediapipe_run_holistic_gpu='mediapipe_folder && GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/holistic_tracking/holistic_tracking_gpu --calculator_graph_config_file=mediapipe/graphs/holistic_tracking/holistic_tracking_gpu.pbtxt'
+alias mediapipe_build_holistic_cpu='mediapipe_folder && bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/holistic_tracking:holistic_tracking_cpu'
+alias mediapipe_run_holistic_cpu='mediapipe_folder && bazel-bin/mediapipe/examples/desktop/holistic_tracking/holistic_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/holistic_tracking/holistic_tracking_cpu.pbtxt'
+
+# Hair Segmentation
+alias mediapipe_build_hair_segmentation_gpu='mediapipe_folder && bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/hair_segmentation:hair_segmentation_gpu'
+alias mediapipe_run_hair_segmentation_gpu='mediapipe_folder && GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/hair_segmentation/hair_segmentation_gpu --calculator_graph_config_file=mediapipe/graphs/hair_segmentation/hair_segmentation_mobile_gpu.pbtxt'
+
+# Object Detection
+alias mediapipe_build_object_detection_cpu='mediapipe_folder && bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/object_detection:object_detection_cpu'
+alias mediapipe_run_object_detection_cpu='mediapipe_folder && bazel-bin/mediapipe/examples/desktop/object_detection/object_detection_cpu --calculator_graph_config_file=mediapipe/graphs/object_detection/object_detection_desktop_live.pbtxt'
+
+# Box Tracking
+alias mediapipe_build_box_tracking_cpu='mediapipe_folder && bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/object_tracking:object_tracking_cpu'
+alias mediapipe_run_box_tracking_cpu='mediapipe_folder && bazel-bin/mediapipe/examples/desktop/object_tracking/object_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/tracking/object_detection_tracking_desktop_live.pbtxt'
+
+# Instant Motion Tracking
+
+# Objectron
+alias mediapipe_build_objectron_cpu='mediapipe_folder && bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/object_detection_3d:objectron_cpu'
+
+# KNIFT
+
+# Auto Flip
+alias mediapipe_build_auto_flip_cpu='mediapipe_folder && bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/autoflip:run_autoflip'
+
+# Media Sequence
+alias mediapipe_build_media_sequence_cpu='mediapipe_folder && bazel build -c opt mediapipe/examples/desktop/media_sequence:media_sequence_demo --define MEDIAPIPE_DISABLE_GPU=1'
+
+# YouTube 8M
