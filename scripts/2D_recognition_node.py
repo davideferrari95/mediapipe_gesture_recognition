@@ -1,11 +1,9 @@
-#!/usr/bin/env python3
-
 import rospy, rospkg
 import pandas as pd 
 import pickle, warnings
 
 # Ignore Pickle Warnings
-warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings('ignore', category=UserWarning)
 
 # Import Mediapipe Messages
 from mediapipe_gesture_recognition.msg import Pose, Face, Hand
@@ -38,10 +36,10 @@ class GestureRecognition2D:
         
         # Choose Gesture File
         gesture_file = ''
-        if self.enable_right_hand: gesture_file += "Right"
-        if self.enable_left_hand:  gesture_file += "Left"
-        if self.enable_pose:       gesture_file += "Pose"
-        if self.enable_face:       gesture_file += "Face"
+        if self.enable_right_hand: gesture_file += 'Right'
+        if self.enable_left_hand:  gesture_file += 'Left'
+        if self.enable_pose:       gesture_file += 'Pose'
+        if self.enable_face:       gesture_file += 'Face'
         
         # Load the Trained Model for the Detected Landmarks
         with open(f'{package_path}/database/2D_Gestures/{gesture_file}/trained_model.pkl', 'rb') as f:
@@ -55,7 +53,7 @@ class GestureRecognition2D:
     def FaceCallback(self, data):      self.face_new_msg  = data
 
 
-    # Gesture Recognition Fuction
+    # Gesture Recognition Function
     def Recognition(self):
         
         # Create a List with the Detected Landmarks Coordinates
@@ -78,14 +76,14 @@ class GestureRecognition2D:
         pose_recognition_name = self.model.predict(X)[0]
         pose_recognition_prob = self.model.predict_proba(X)[0]
 
-        # Print the Recognised Gesture 
+        # Print the Recognized Gesture 
         Prob = max(pose_recognition_prob)
         if (Prob > self.recognition_precision_probability): print(pose_recognition_name)
 
-    # Process Landmark Messages Fuction
+    # Process Landmark Messages Function
     def process_landmarks(self, enable, message_name, Landmarks):
         
-        # Check Landmarks Existance 
+        # Check Landmarks Existence
         if (enable == True and hasattr(self, message_name)):
             
             # Get Message Variable Name
@@ -108,7 +106,7 @@ class GestureRecognition2D:
 #                           Main                           #
 ############################################################
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     
     # Instantiate Gesture Recognition Class
     GR = GestureRecognition2D()

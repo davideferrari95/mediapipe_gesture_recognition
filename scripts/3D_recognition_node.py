@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import rospy, rospkg
 import numpy as np
 import pickle, warnings
@@ -9,7 +7,7 @@ from os import listdir
 from os.path import join, isdir
 
 # Ignore Pickle Warnings
-warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings('ignore', category=UserWarning)
 
 # Import Mediapipe Messages
 from mediapipe_gesture_recognition.msg import Pose, Face, Hand
@@ -45,10 +43,10 @@ class GestureRecognition3D:
         
         # Choose Gesture File
         gesture_file = ''
-        if self.enable_right_hand: gesture_file += "Right"
-        if self.enable_left_hand:  gesture_file += "Left"
-        if self.enable_pose:       gesture_file += "Pose"
-        if self.enable_face:       gesture_file += "Face"
+        if self.enable_right_hand: gesture_file += 'Right'
+        if self.enable_left_hand:  gesture_file += 'Left'
+        if self.enable_pose:       gesture_file += 'Pose'
+        if self.enable_face:       gesture_file += 'Face'
         
         # Load the Trained Model for the Detected Landmarks
         with open(f'{package_path}/database/3D_Gestures/{gesture_file}/trained_model.pkl', 'rb') as f:
@@ -66,7 +64,7 @@ class GestureRecognition3D:
     def FaceCallback(self, data):      self.face_new_msg  = data
 
 
-    # Gesture Recognition Fuction
+    # Gesture Recognition Function
     def Recognition(self):
 
         # Coordinate Vector
@@ -84,7 +82,7 @@ class GestureRecognition3D:
         # Append the Landmarks Coordinates from the Last Frame to our Sequence
         self.sequence.append(keypoints)
         
-        # Analyse Only the Last 30 Frames
+        # Analyze Only the Last 30 Frames
         self.sequence = self.sequence[-30:]
 
         if len(self.sequence) == 30:
@@ -92,14 +90,14 @@ class GestureRecognition3D:
             # Obtain the Probability of Each Gesture
             prob = self.model.predict(np.expand_dims(self.sequence, axis=0))[0]
             
-            # Print the Name of the Gesture Recognised
+            # Print the Name of the Gesture Recognized
             if (np.amax(prob) > self.recognition_precision_probability):
                 print(self.actions[np.argmax(prob)])
 
-    # Process Landmark Messages Fuction
+    # Process Landmark Messages Function
     def process_landmarks(self, enable, message_name, Landmarks):
         
-        # Check Landmarks Existance 
+        # Check Landmarks Existence
         if (enable == True and hasattr(self, message_name)):
             
             # Get Message Variable Name
@@ -117,7 +115,7 @@ class GestureRecognition3D:
 ############################################################
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     
     # Instantiate Gesture Recognition Class
     GR = GestureRecognition3D()
