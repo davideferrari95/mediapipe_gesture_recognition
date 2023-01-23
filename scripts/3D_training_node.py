@@ -1,263 +1,310 @@
-#!/usr/bin/env python3
-
-#Global imports
-import os
+import os, time
 import rospy, rospkg
-import time
-import pandas as pd, pickle
 import numpy as np
 
-# Obtain files from a directory
-from os import listdir
-from os.path import join, isdir
+# Import Pickle for Saving
+import pickle
+
+# Tensorflow Neural Network
+from tensorflow import keras
+from keras.models import Sequential
+from keras.layers import LSTM, Dense, Dropout
+from keras.callbacks import TensorBoard
+from keras.callbacks import EarlyStopping
+from keras import utils as KerasUtils
+
+# SkLearn Preprocess Functions
+from sklearn import model_selection as SKLearnModelSelection
 
 # Import Mediapipe Messages
 from mediapipe_gesture_recognition.msg import Pose, Face, Hand
 
-# Get Package Path
-package_path = rospkg.RosPack().get_path('mediapipe_gesture_recognition')
+# Import Utilities
+from Utils import countdown
 
-right_new_msg = Hand()
-left_new_msg = Hand() 
-pose_new_msg = Pose()
-face_new_msg = Face()
+class GestureRecognitionTraining3D:
+    
+    ''' 3D Gesture Recognition Training Class '''
 
-
-############################################################
-#                    Callback Functions                    #
-############################################################
-
-
-def handRightCallback(data):
-    global right_new_msg
-    right_new_msg = data
-
-def handLeftCallback(data):
-    global left_new_msg 
-    left_new_msg = data
-
-def PoseCallback(data):
-    global pose_new_msg 
-    pose_new_msg = data
-
-def FaceCallback(data):
-    global face_new_msg
-    face_new_msg = data
-
-
-############################################################
-#                 Recording phase functions                #
-############################################################
-
-
-def extract_keypoints(pose_msg, face_msg, left_msg, right_msg):
-    pose = np.array([[res.x, res.y, res.z, res.v] for res in pose_msg.keypoints]).flatten() if pose_new_msg else np.zeros(33*4)
-    face = np.array([[res.x, res.y, res.z] for res in face_msg.keypoints]).flatten() if face_new_msg else np.zeros(468*3)
-    lh = np.array([[res.x, res.y, res.z] for res in left_msg.keypoints]).flatten() if left_new_msg else np.zeros(21*3)
-    rh = np.array([[res.x, res.y, res.z] for res in right_msg.keypoints]).flatten() if right_new_msg else np.zeros(21*3)
-    return np.concatenate([pose, face, lh, rh])
-
-#Create a folder for each gesture, this folder contains folders for each videos we will record
-def create_folders(gesture):
-    for sequence in range(no_sequences):
-        try: 
-            os.makedirs(os.path.join(f'{package_path}/database/3D_Gestures/{gesture_file}/', gesture, str(sequence)))
-        except:
-            pass
-
-#Create a loop to save the landmarks coordinates for each frame of the video (each video is made of the number of frames defined in the variable "sequence_length")
-#Then loop to save all the videos for the gesture (the number of videos for training is defined by the variable "no_sequences")
-def store_videos(gesture):
-    # Loop through sequences aka videos
-    for sequence in range(no_sequences):
-        print("\nCollecting frames for {}  Video Number {}".format(gesture, sequence))
-        print("Collection starting in 2 seconds")
-        countdown(2)
-        print("Starting collection")
-        start = rospy.get_time() 
+    def __init__(self):
         
-        # Loop through video length aka sequence length
-        for frame_num in range(sequence_length):
-            # Export keypoints values in the correct folder
-            keypoints = extract_keypoints(pose_new_msg, face_new_msg, left_new_msg, right_new_msg)
-            npy_path = os.path.join(f'{package_path}/database/3D_Gestures/{gesture_file}/', gesture, str(sequence), str(frame_num))
-            np.save(npy_path, keypoints)
-            time.sleep(1/30)            #To have 30 frames/s
+        # ROS Initialization
+        rospy.init_node('mediapipe_gesture_recognition_training_node', anonymous=True) 
+        self.rate = rospy.Rate(30)
         
-        end= rospy.get_time() 
-        acquisition_time = end-start
-        print ("Lenght of the acquisition : ", acquisition_time)
-        print("End collection")
-        time.sleep(1)
+        # Mediapipe Subscribers
+        rospy.Subscriber('/mediapipe_gesture_recognition/right_hand', Hand, self.RightHandCallback)
+        rospy.Subscriber('/mediapipe_gesture_recognition/left_hand',  Hand, self.LeftHandCallback)
+        rospy.Subscriber('/mediapipe_gesture_recognition/pose',       Pose, self.PoseCallback)
+        rospy.Subscriber('/mediapipe_gesture_recognition/face',       Face, self.FaceCallback)
 
-#Create a countdown (the duration of the countdown will be defined by the variable "num_of_seconds")
-def countdown(num_of_secs):
-    
-    while (not rospy.is_shutdown() and num_of_secs!=0):
-        m, s = divmod(num_of_secs, 60)
-        min_sec_format = '{:02d}:{:02d}'.format(m, s)
-        print(min_sec_format)
-        time.sleep(1)
-        num_of_secs -= 1
+        # Read Mediapipe Modules Parameters
+        self.enable_right_hand = rospy.get_param('enable_right_hand', False)
+        self.enable_left_hand  = rospy.get_param('enable_left_hand',  False)
+        self.enable_pose = rospy.get_param('enable_pose', False)
+        self.enable_face = rospy.get_param('enable_face', False)
+        
+        # Select Gesture File
+        self.gesture_file = ''
+        if self.enable_right_hand: self.gesture_file += 'Right'
+        if self.enable_left_hand:  self.gesture_file += 'Left'
+        if self.enable_pose:       self.gesture_file += 'Pose'
+        if self.enable_face:       self.gesture_file += 'Face'
+        
+        # Read Training Parameters
+        self.recording_phase = rospy.get_param('recording', True)
+        self.training_phase  = rospy.get_param('training', False)
 
+        # Get Package Path
+        self.package_path = rospkg.RosPack().get_path('mediapipe_gesture_recognition')
+        
+        # Number of videos worth of data
+        self.no_sequences = 30
 
-############################################################
-#                 Training phase functions                 #
-############################################################
+        # Number of frames for each videos (30 frames/s) * length of the video in seconds
+        self.sequence_length = 30*1
 
-
-def train_3D_model():
-    
-    # Preprocess datas and create labels and features
-    from sklearn.model_selection import train_test_split
-    from keras.utils import to_categorical
-
-    actions = [f for f in listdir(f'{package_path}/database/3D_Gestures/{gesture_file}/') if isdir(join(f'{package_path}/database/3D_Gestures/{gesture_file}/', f))]
-    actions = np.array(actions)
-    print (actions)
-    
-    label_map = {label:num for num, label in enumerate(actions)}
-    
-    sequences, labels = [], []
-    for action in actions:
-        for sequence in range(no_sequences):
-            window = []
-            for frame_num in range(sequence_length):
-                res = np.load(os.path.join(f'{package_path}/database/3D_Gestures/{gesture_file}/', action, str(sequence), "{}.npy".format(frame_num)))
-                window.append(res)
-            sequences.append(window)
-            labels.append(label_map[action])
-    
-    print(np.array(sequences).shape)
-    print(np.array(labels).shape)
-
-    X = np.array(sequences)
-    print(X.shape)
-    
-    y = to_categorical(labels).astype(int)
-
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1)
-    print(X_test.shape[2])
-    print(y_test.shape)
-
-
-    # Neural network with tensorflow
-    from tensorflow import keras
-    from keras.models import Sequential
-    from keras.layers import LSTM, Dense, Dropout
-    from keras.callbacks import TensorBoard
-    from keras.callbacks import EarlyStopping
-
-    log_dir = os.path.join('Logs')
-    tb_callback = TensorBoard(log_dir=log_dir)
-
-    early_stopping = EarlyStopping(monitor = 'loss', patience = 15)
-
-    model = Sequential()
-    model.add(LSTM(64, return_sequences=True, activation='relu', input_shape=(30,X_test.shape[2])))
-    model.add(Dropout(0.5))
-    model.add(LSTM(128, return_sequences=True, activation='relu'))
-    model.add(Dropout(0.5))
-    model.add(LSTM(64, return_sequences=False, activation='relu'))
-    model.add(Dropout(0.5))
-    
-    model.add(Dense(64, activation='relu'))
-    model.add(Dropout(0.5))
-    model.add(Dense(32, activation='relu'))
-    model.add(Dropout(0.5))
-    model.add(Dense(actions.shape[0], activation='softmax'))
-
-    model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['categorical_accuracy'])
-
-    model.fit(X_train, y_train, epochs=200, callbacks=[tb_callback, early_stopping])
-    
-    #Save the model in a file called trained_model.pkl
-    with open(f'{package_path}/database/3D_Gestures/{gesture_file}/trained_model.pkl', 'wb') as savefile:
-        pickle.dump(model, savefile, protocol = pickle.HIGHEST_PROTOCOL)
+    # Callback Functions
+    def RightHandCallback(self, data): self.right_new_msg: Hand() = data
+    def LeftHandCallback(self, data):  self.left_new_msg:  Hand() = data
+    def PoseCallback(self, data):      self.pose_new_msg:  Pose() = data
+    def FaceCallback(self, data):      self.face_new_msg:  Face() = data
 
 
 ############################################################
-#                    ROS Initialization                    #
+#                 Recording Phase Functions                #
 ############################################################
 
+    # Keypoint Flattening Function
+    def flattenKeypoints(self, pose_msg, face_msg, left_msg, right_msg):
+        
+        ''' 
+        Flatten Incoming Messages of Create zeros Vector \n
+        Concatenate each Output
+        '''
+        
+        # Flatten Incoming Messages of Create zeros Vector
+        pose    = np.array([[res.x, res.y, res.z, res.v] for res in pose_msg.keypoints]).flatten()  if self.pose_new_msg  else np.zeros(33*4)
+        face    = np.array([[res.x, res.y, res.z]        for res in face_msg.keypoints]).flatten()  if self.face_new_msg  else np.zeros(468*3)
+        left_h  = np.array([[res.x, res.y, res.z]        for res in left_msg.keypoints]).flatten()  if self.left_new_msg  else np.zeros(21*3)
+        right_h = np.array([[res.x, res.y, res.z]        for res in right_msg.keypoints]).flatten() if self.right_new_msg else np.zeros(21*3)
+        
+        # TODO: Delete new_messages
+        
+        # Concatenate Data
+        return np.concatenate([pose, face, left_h, right_h])
 
-# ROS Initialization
-rospy.init_node('mediapipe_gesture_recognition_training_node', anonymous=True) 
-rate = rospy.Rate(30)
+    # Create Folders for Each Gesture
+    def createFolders(self, gesture):
+        
+        ''' 
+        Create a Folder for Each Gesture \n
+        This Folder Contains a Folder for Each Recorded Video
+        '''
+        
+        for sequence in range(self.no_sequences):
+            try: os.makedirs(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(sequence)))
+            except: pass
 
-# Mediapipe Subscribers
-rospy.Subscriber('/mediapipe_gesture_recognition/right_hand', Hand, handRightCallback)
-rospy.Subscriber('/mediapipe_gesture_recognition/left_hand', Hand, handLeftCallback)
-rospy.Subscriber('/mediapipe_gesture_recognition/pose', Pose, PoseCallback)
-rospy.Subscriber('/mediapipe_gesture_recognition/face', Face, FaceCallback)
+    # Record Videos Function
+    def recordVideos(self, gesture):
+        
+        '''
+        Loop to Save the Landmarks Coordinates for each Frame of the Video
+        Each Video contains the Number of Frames defined in "sequence_length" (30FPS)
+        Then Loop to Save All the Videos for the Recorded Gesture
+        Number of Videos for Training is defined in "no_sequences"
+        '''
+        
+        # Loop through Sequences (Videos)
+        for sequence in range(self.no_sequences):
+            
+            print(f'\nCollecting Frames for "{gesture}" | Video Number: {sequence}')
+            print('Collection Starting in 2 Seconds')
+            countdown(2)
+            print('Starting Collection')
+            start = rospy.get_time() 
+            
+            # Loop through Video Length (Sequence Length)
+            for frame_num in range(self.sequence_length):
+                
+                # Flatten and Concatenate Keypoints
+                keypoints = self.flattenKeypoints(self.pose_new_msg, self.face_new_msg, self.left_new_msg, self.right_new_msg)
+                
+                # Export Keypoints Values in the Correct Folder
+                npy_path = os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(sequence), str(frame_num))
+                np.save(npy_path, keypoints)
+                
+                # Sleep for 30 FPS
+                # TODO: Adjust To have 30 frames/s
+                time.sleep(1/30)
+            
+            print (f'Acquisition Length: {rospy.get_time() - start}')
+            print('End Collection')
+            time.sleep(1)
+        
+        print('All Videos Saved')
 
-# Read Mediapipe Modules Parameters
-enable_right_hand_ = rospy.get_param('enable_right_hand', False)
-enable_left_hand_ = rospy.get_param('enable_left_hand', False)
-enable_pose_ = rospy.get_param('enable_pose', False)
-enable_face_ = rospy.get_param('enable_face', False)
+    def Record(self):
+        
+        ''' Recording Phase '''
+        
+        while not rospy.is_shutdown():
+            
+            # FIX: Remove ???
+            self.TrainNetwork()
 
-# Read Training Parameters
-recording_phase = rospy.get_param('recording', True)
-training_phase = rospy.get_param('training', False)
+            # Gesture Labeling
+            gesture_name = input('\nInsert Gesture Name: ')
 
-# Number of videos worth of data
-no_sequences = 30
+            # Create Folders for Each Video
+            self.createFolders(gesture_name)
+            
+            # Start Counter
+            print('\nAcquisition Starts in:')
+            countdown(5)
+            
+            # Record and Save Videos
+            self.recordVideos(gesture_name)
+                    
+            # Ask for Another Recognition Phase
+            if not input('\nStart Another Gesture Acquisition ? [Y/N]: ') in ['Y','y']:
+                
+                # Ask for Training Phase
+                if input('\nStart Model Training ? [Y/N]: ') in ['Y','y']: self.training_phase = True
+                
+                # STOP Recording Phase
+                self.recording_phase = False
+                break
 
-# Number of frames for each videos (30 frames/s) * lenght of the video in seconds
-sequence_length = 30*1
+
+############################################################
+#                 Training Phase Functions                 #
+############################################################
+
+    def createModel(self, input_shape, output_shape, optimizer='Adam', loss='categorical_crossentropy', metrics=['categorical_accuracy']):
+        
+        # Create Model as a Sequential NN
+        model = Sequential()
+        
+        # Add LSTM (Long Short-Term Memory) Layers
+        model.add(LSTM(64, return_sequences=True, activation='relu', input_shape=input_shape))
+        model.add(Dropout(0.5))
+        model.add(LSTM(128, return_sequences=True, activation='relu'))
+        model.add(Dropout(0.5))
+        model.add(LSTM(64, return_sequences=False, activation='relu'))
+        model.add(Dropout(0.5))
+        
+        # Add Dense (FullyConnected) Layers
+        model.add(Dense(64, activation='relu'))
+        model.add(Dropout(0.5))
+        model.add(Dense(32, activation='relu'))
+        model.add(Dropout(0.5))
+        model.add(Dense(output_shape, activation='softmax'))
+
+        # Add Compile Parameters
+        model.compile(optimizer, loss, metrics)
+        
+        return model
+
+    def modelCallbacks(self):
+        
+        log_dir = os.path.join('Logs')
+        tb_callback = TensorBoard(log_dir=log_dir)
+
+        early_stopping = EarlyStopping(monitor = 'loss', patience = 30)
+
+        return [tb_callback, early_stopping]
+    
+    def processGestures(self, gestures):
+        
+        # Transform to Numpy Array
+        gestures = np.array(gestures)
+        print(gestures)
+        
+        # Map Gesture Label
+        label_map = {label:num for num, label in enumerate(gestures)}
+        
+        # Create Sequence and Label Vectors
+        sequences, labels = [], []
+
+        # Loop Over Gestures
+        for gesture in gestures:
+            
+            # Loop Over Video Sequence
+            for sequence in range(self.no_sequences):
+
+                frame = []
+
+                # Loop Over Frames
+                for frame_num in range(self.sequence_length):
+                    
+                    # Load Frame
+                    frame.append(np.load(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/',
+                                          gesture, str(sequence), '{}.npy'.format(frame_num))))
+                
+                # Append Gesture Sequence and Label
+                sequences.append(frame)
+                labels.append(label_map[gesture])
+
+                # Info Print
+                print(f'Sequences Shape: {np.array(sequences).shape}')
+                print(f'Labels Shape: {np.array(labels).shape}')
+        
+        return sequences, labels
+    
+    def TrainNetwork(self):
+
+        # Load Gesture List
+        gestures = [f for f in os.listdir(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/') \
+                if os.path.isdir(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', f))]
+        
+        # Process Gestures
+        sequences, labels = self.processGestures(gestures)
+
+        # Create Input Array
+        X = np.array(sequences)
+        print(f'X Shape: {X.shape}')
+        
+        # Convert Labels to Integer Categories
+        Y = KerasUtils.to_categorical(labels).astype(int)
+        
+        # Split Dataset
+        X_train, X_test, Y_train, Y_test = SKLearnModelSelection.train_test_split(X, Y, test_size=0.1)
+        print(f'X_Test Shape: {X_test.shape[2]} | Y_Test Shape: {Y_test.shape}')
+
+        # Create NN Model
+        model = self.createModel(input_shape=(30,X_test.shape[2]), output_shape=gestures.shape[0], 
+                                optimizer='Adam', loss='categorical_crossentropy', metrics=['categorical_accuracy'])
+        
+        # Train Model
+        model.fit(X_train, Y_train, epochs=200, callbacks=self.modelCallbacks())
+        
+        # Save Model as 'trained_model.pkl'
+        with open(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/trained_model.pkl', 'wb') as save_file:
+            pickle.dump(model, save_file, protocol = pickle.HIGHEST_PROTOCOL)
 
 
 ############################################################
 #                           Main                           #
 ############################################################
 
-
-#Save witch part of the body is being detected
-gesture_file = ''
-if enable_right_hand_ == True :
-    gesture_file = gesture_file + "Right"
-if enable_left_hand_== True:
-    gesture_file = gesture_file + "Left"
-if enable_pose_== True:
-    gesture_file = gesture_file + "Pose"
-if enable_face_ == True:
-    gesture_file = gesture_file + "Face"
-
-
-###     RECORDING PHASE     ###
-
-while not rospy.is_shutdown() and recording_phase:
+if __name__ == '__main__':
     
-    train_3D_model()
-
-    # Gesture Labeling
-    gesture_name = input("\nInsert Gesture Name: ")
-
-    # Create folders for the videos
-    create_folders(gesture_name)
+    # Instantiate Gesture Recognition Training Class
+    GRT = GestureRecognitionTraining3D()
     
-    # Start Counter
-    print("\nAcquisition Starts in:")
-    countdown(5)
+    # Recording Phase
+    if  (GRT.recording_phase): GRT.Record()
     
-    #Tape and save videos
-    store_videos(gesture_name)
-    
-    print('All the videos have been saved')
-    
-    if not input('\nStart Another Gesture Acquisition ? [Y/N]: ') in ['Y','y']:
+    # Training Phase
+    elif (GRT.training_phase) and not rospy.is_shutdown(): 
         
-        # ALLOW TRAINING PHASE
-        if input('\nStart Model Training ? [Y/N]: ') in ['Y','y']: training_phase = True
+        # Train Network
+        GRT.TrainNetwork()
         
-        # STOP RECORDING PHASE
-        recording_phase = False
-        break
-        
-
-###     TRAINING PHASE     ###
-
-if not rospy.is_shutdown() and training_phase:
-    train_3D_model()
+        # Terminate Training Phase
+        GRT.training_phase = False
+    
+    # Shutdown
+    else: rospy.shutdown()
