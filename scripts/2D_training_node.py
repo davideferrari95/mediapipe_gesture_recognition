@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import rospy, rospkg
 import pandas as pd
 
@@ -21,7 +19,12 @@ from os.path import isfile, join
 # Import Mediapipe Messages
 from mediapipe_gesture_recognition.msg import Pose, Face, Hand
 
+# Import Utilities
+from Utils import countdown
+
 class GestureRecognitionTraining2D:
+
+    ''' 2D Gesture Recognition Training Class '''
 
     def __init__(self):
 
@@ -37,23 +40,23 @@ class GestureRecognitionTraining2D:
 
         # Read Mediapipe Modules Parameters
         self.enable_right_hand = rospy.get_param('enable_right_hand', False)
-        self.enable_left_hand =  rospy.get_param('enable_left_hand',  False)
+        self.enable_left_hand  = rospy.get_param('enable_left_hand',  False)
         self.enable_pose = rospy.get_param('enable_pose', False)
         self.enable_face = rospy.get_param('enable_face', False)
-
+        
         # Read Training Parameters
         self.recording_phase = rospy.get_param('recording', True)
-        self.training_phase  = rospy.get_param('training',  False)
+        self.training_phase  = rospy.get_param('training', False)
 
         # Get Package Path
         self.package_path = rospkg.RosPack().get_path('mediapipe_gesture_recognition')
 
 
     # Callback Functions
-    def RightHandCallback(self, data): self.right_new_msg = data
-    def LeftHandCallback(self, data):  self.left_new_msg  = data
-    def PoseCallback(self, data):      self.pose_new_msg  = data
-    def FaceCallback(self, data):      self.face_new_msg  = data
+    def RightHandCallback(self, data): self.right_new_msg: Hand() = data
+    def LeftHandCallback(self, data):  self.left_new_msg:  Hand() = data
+    def PoseCallback(self, data):      self.pose_new_msg:  Pose() = data
+    def FaceCallback(self, data):      self.face_new_msg:  Face() = data
 
 
 ############################################################
@@ -80,14 +83,14 @@ class GestureRecognitionTraining2D:
 
         # Select Gesture File
         self.gesture_file = ''
-        if self.enable_right_hand: self.gesture_file += "Right"
-        if self.enable_left_hand:  self.gesture_file += "Left"
-        if self.enable_pose:       self.gesture_file += "Pose"
-        if self.enable_face:       self.gesture_file += "Face"
+        if self.enable_right_hand: self.gesture_file += 'Right'
+        if self.enable_left_hand:  self.gesture_file += 'Left'
+        if self.enable_pose:       self.gesture_file += 'Pose'
+        if self.enable_face:       self.gesture_file += 'Face'
 
         # Save Dict Object with Pickle
-        with open(f'{self.package_path}/database/Gestures/{self.gesture_file}/{name}.pkl', 'wb') as savefile:
-            pickle.dump(data_dictionary, savefile, protocol = pickle.HIGHEST_PROTOCOL)
+        with open(f'{self.package_path}/database/Gestures/{self.gesture_file}/{name}.pkl', 'wb') as save_file:
+            pickle.dump(data_dictionary, save_file, protocol = pickle.HIGHEST_PROTOCOL)
             # print(data_dictionary)
 
         print('Gesture Saved')
@@ -112,20 +115,6 @@ class GestureRecognitionTraining2D:
             # Access to Each Data in 'Right Hand' Dataframe
             print('\nRight Hand:\n', data_dictionary[key]['Right Hand'].loc[0])
 
-    # Cowntdown Function
-    def countdown(self, num_of_secs):
-
-        print("\nAcquisition Starts in:")
-
-        # Wait Until 0 Seconds Remaining
-        while (not rospy.is_shutdown() and num_of_secs != 0):
-            m, s = divmod(num_of_secs, 60)
-            min_sec_format = '{:02d}:{:02d}'.format(m, s)
-            print(min_sec_format)
-            rospy.sleep(1)
-            num_of_secs -= 1
-
-        print("\nSTART\n")
 
     # Record Function
     def Record(self):
@@ -134,16 +123,16 @@ class GestureRecognitionTraining2D:
         data = {} 
 
         # Gesture Labeling
-        gesture_name = input("\nInsert Gesture Name: ")
+        gesture_name = input('\nInsert Gesture Name: ')
 
         # Counter
-        self.countdown(5)
+        countdown(5)
 
         # Starting Time
         start = rospy.Time.now()         
         ACQUISITION_TIME = 10
 
-        # Recognise Gesture for "ACQUISITION_TIME" Seconds
+        # Recognize Gesture for "ACQUISITION_TIME" Seconds
         while(not rospy.is_shutdown() and (rospy.Time.now() - start).to_sec() < ACQUISITION_TIME):
 
             # Add Incoming Messages to Dataframe
@@ -152,14 +141,14 @@ class GestureRecognitionTraining2D:
             # Sleep for the Remaining Cycle Time (30 FPS)
             self.rate.sleep()
 
-        print("End of The Acquisition, Saving...")
+        print('End of The Acquisition, Saving...')
 
         # Save Gesture Recorded Data
         self.saveGesture(data, gesture_name)
 
         if not input('\nStart Another Gesture Acquisition ? [Y/N]: ') in ['Y','y']:
 
-            # Ask for Trainig Phase
+            # Ask for Training Phase
             if input('\nStart Model Training ? [Y/N]: ') in ['Y','y']: self.training_phase = True
 
             # Stop Recording Phase
@@ -175,8 +164,8 @@ class GestureRecognitionTraining2D:
         try:
 
             # Read Dict Object with Pickle
-            with open(f'{self.package_path}/database/Gestures/{self.gesture_file}/{name}', 'rb') as inputfile:
-                reading = pickle.load(inputfile)
+            with open(f'{self.package_path}/database/Gestures/{self.gesture_file}/{name}', 'rb') as input_file:
+                reading = pickle.load(input_file)
                 print(f'Gesture "{name}" Loaded')
                 return reading
 
@@ -217,7 +206,7 @@ class GestureRecognitionTraining2D:
             # Add All the Other Rows
             for key in dictionary:
 
-                # Initialize Temporany DataFrame
+                # Initialize Temporary DataFrame
                 temporary_df = pd.DataFrame()
 
                 # Process All The Rows
@@ -228,7 +217,7 @@ class GestureRecognitionTraining2D:
                 temporary_df = temporary_df.T
                 df = pd.concat([df, temporary_df], axis = 0)
 
-            # Drop the Unwanted Datas
+            # Drop the Unwanted Data
             df.drop(index = 0)
             del df['Keypoint Number']
             del df['Keypoint Name']
@@ -282,7 +271,7 @@ class GestureRecognitionTraining2D:
         # Get the Label to Match [Class Name]
         label = df['Position'] 
         
-        # Split the Datas adding Random Value in Training
+        # Split the Data adding Random Value in Training
         X_train, X_test, Y_train, Y_test = train_test_split(variables, label, test_size=0.3, random_state=1234)
         
         return X_train, X_test, Y_train, Y_test
@@ -308,12 +297,12 @@ class GestureRecognitionTraining2D:
 
         # Evaluate and Serialize the Model
         for algo, model in fit_models.items():
-            yhat = model.predict(X_test)
-            print(algo, accuracy_score(Y_test, yhat))
+            y_hat = model.predict(X_test)
+            print(algo, accuracy_score(Y_test, y_hat))
 
         # Export the Best Model and Save It as "trained_model.pkl"
-        with open(f'{self.package_path}/database/Gestures/{self.gesture_file}/trained_model.pkl', 'wb') as savefile:
-            pickle.dump(fit_models['rf'], savefile, protocol = pickle.HIGHEST_PROTOCOL)
+        with open(f'{self.package_path}/database/Gestures/{self.gesture_file}/trained_model.pkl', 'wb') as save_file:
+            pickle.dump(fit_models['rf'], save_file, protocol = pickle.HIGHEST_PROTOCOL)
             # print(data_dictionary)
 
         print('Model Trained Successfully')
@@ -322,7 +311,7 @@ class GestureRecognitionTraining2D:
 #                           Main                           #
 ############################################################
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     
     # Instantiate Gesture Recognition Training Class
     GRT = GestureRecognitionTraining2D()
@@ -330,10 +319,10 @@ if __name__ == "__main__":
     while not rospy.is_shutdown():
         
         # Recording Phase
-        if (GRT.recording_phase): GRT.Record()
+        if  (GRT.recording_phase): GRT.Record()
 
         # Training Phase
-        elif(GRT.training_phase): GRT.Train()
+        elif (GRT.training_phase): GRT.Train()
         
         # Shutdown
         else: rospy.shutdown()
