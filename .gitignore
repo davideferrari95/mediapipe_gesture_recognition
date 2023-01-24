@@ -48,3 +48,6 @@ MANIFEST
 
 # .vscode
 .vscode/*
+
+# Ignore Large Dataset Folder
+dataset/20bn-jester-v1
