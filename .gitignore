@@ -46,8 +46,5 @@ MANIFEST
 *.todo
 .idea/
 
-# Dataset Link
-doc/Dataset Link
-
 # .vscode
 .vscode/*
