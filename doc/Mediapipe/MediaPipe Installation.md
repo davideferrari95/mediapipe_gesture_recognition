@@ -1,58 +1,110 @@
-# MediaPipe Installation Instruction - Ubuntu 18.04
+# MediaPipe Installation Instruction
 
-How to install mediapipe on Ubuntu 18.04
+How to install Google MediaPipe on Ubuntu
 
 ## Getting Started
 
 Some quick references to the guides and to the official tutorials of MediaPipe.
 
-### MediaPipe Repository:
+##### MediaPipe Repository
 
-- https://github.com/google/mediapipe
+- <https://github.com/google/mediapipe>
 
-### Installation Tutorials:
+##### Official Installation Tutorials
 
-- https://google.github.io/mediapipe/getting_started/install.html
+- <https://google.github.io/mediapipe/getting_started/install.html>
+- <https://google.github.io/mediapipe/getting_started/python.html>
+- <https://google.github.io/mediapipe/getting_started/cpp.html>
 
-- https://google.github.io/mediapipe/getting_started/cpp.html
+##### Dependencies
 
-### Dependencies
-
-- Ubuntu 18.04
+- Ubuntu 18.04+
 - Python 3.6+
 
-## Installation
+# Installation
+
+It is recommended to always refer to the updated guides on the official MediaPipe website.
+
+To install the Python Libraries go to the [Python Installation](#python_installation) section.
+To install the C++ Executables go to the [C++ Executables Installation](#cpp_installation) section.
+
+## <a name="python_installation"></a> Python Installation
+
+MediaPipe offers ready-to-use yet customizable Python solutions as a prebuilt Python package. MediaPipe Python package is available on PyPI for Linux, macOS and Windows.
+
+#### Installation from `pip`
+
+`pip install mediapipe`
+
+#### Installation from Source
+
+1. **Install Dependancies**
+    &nbsp;
+    `sudo apt install python3-dev`
+    `sudo apt install -y protobuf-compiler`
+    &nbsp;
+
+2. **[OPTIONAL] Install and Use Python Virtual Enviroment**
+    &nbsp;
+    `sudo apt install python3-venv`
+    `python3 -m venv mp_env && source mp_env/bin/activate`
+    &nbsp;
+
+3. **Install MediaPipe on pip**
+    &nbsp;
+    `pip3 install mediapipe`
+    &nbsp;
+
+4. **Install Requirements**
+    &nbsp;
+    `cd .../mediapipe`
+    `pip3 install -r requirements.txt`
+    &nbsp;
+
+5. **Setup and Build**
+    &nbsp;
+    `cd .../mediapipe`
+    `python3 setup.py gen_protos`
+    `python3 setup.py install --link-opencv`
+&nbsp;
+
+## <a name="cpp_installation"></a> C++ Executables Installation
+
+Fully Tested in Ubuntu 18.04
 
 1. **Install Go**
-
+    &nbsp;
     - Download the last Go version (we use 1.16.3) from the official [download page](https://golang.org/dl/) or using wget:
-
-        `wget https://dl.google.com/go/go1.16.3.linux-amd64.tar.gz `
+    &nbsp;
+        `wget https://dl.google.com/go/go1.16.3.linux-amd64.tar.gz`
+    &nbsp;
 
     - Go to the download folder, extract and install:
-
+        &nbsp;
         `sudo tar -xvf go1.16.3.linux-amd64.tar.gz`
-
         `sudo mv go /usr/local`
+        &nbsp;
 
     - Setup Go enviroment in file `.bashrc`:
-        
+        &nbsp;
       - GOROOT is the install location of Go.
       - GOPATH is the location of your work directory.
+        &nbsp;
 
         `export GOROOT=/usr/local/go`
-        
         `export GOPATH=$HOME/folder_where_Go_packages_will_be_saved`
-        
         `export PATH=$GOPATH/bin:$GOROOT/bin:$PATH`
+        &nbsp;
 
     - Verify Installation, type on terminal:
-
+        &nbsp;
         `go version`
+        &nbsp;
 
             go version go1.15.2 linux/amd64
 
         `go env`
+        &nbsp;
 
             GOARCH="amd64"
             GOBIN=""
@@ -72,71 +124,86 @@ Some quick references to the guides and to the official tutorials of MediaPipe.
             CGO_ENABLED="1"
             ...
             ...
-        
-2. **Install Bazelisk**
-   
-    - Install with Go:
+        &nbsp;
 
+2. **Install Bazelisk**
+    &nbsp;
+    - Install with Go:
+        &nbsp;
         > go get github.com/bazelbuild/bazelisk
 
+        &nbsp;
     - Add to PATH in `.bashrc`
-
+        &nbsp;
         `export PATH=$PATH:$(go env GOPATH)/bin`
+        &nbsp;
 
     - Chech the installation by typing on terminal:
-
+        &nbsp;
         `bazelisk help`
+        &nbsp;
 
     - Add bazel alias to `.bash_aliases` file:
-
+        &nbsp;
         `alias bazel='bazelisk'`
+        &nbsp;
 
 3. **Install gcc-8**
-
+    &nbsp;
     - Install from binaries:
-
+        &nbsp;
         `sudo apt-get install gcc-8 g++-8`
+        &nbsp;
 
     - Set new default compiler:
-
+        &nbsp;
         `sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 800 --slave /usr/bin/g++ g++ /usr/bin/g++-8`
+        &nbsp;
 
     - Check gcc version (gcc8 = 8.4.0):
-
+        &nbsp;
         `gcc --version`
+        &nbsp;
 
 4. **Clone MediaPipe repository**
+    &nbsp;
+    > git clone <https://github.com/google/mediapipe.git>
 
-    > git clone https://github.com/google/mediapipe.git
-    
+    &nbsp;
+
 5. **Install OpenCV and FFmpeg**
-
+    &nbsp;
     - Install dependancies from source:
-
+        &nbsp;
         `sudo apt-get install libopencv-core-dev libopencv-highgui-dev libopencv-calib3d-dev libopencv-features2d-dev libopencv-imgproc-dev libopencv-video-dev`
-
+        &nbsp;
         `pip3 install absl-py attrs dataclasses numpy opencv-contrib-python protobuf six wheel`
-
+        &nbsp;
 
     - Configure MediaPipe Enviroment
-
+        &nbsp;
         - Go into mediapipe installation folder
+        &nbsp;
 
         **Ubuntu 18.04:**
+        &nbsp;
+        - Debian 9 and Ubuntu 18.04 install the packages in `/usr/lib/x86_64-linux-gnu`. MediaPipe’s `opencv_linux.BUILD` and `ffmpeg_linux.BUILD` are configured for this library path.
+        &nbsp;
 
-        - Debian 9 and Ubuntu 18.04 install the packages in `/usr/lib/x86_64-linux-gnu`. MediaPipe’s `opencv_linux.BUILD` and `ffmpeg_linux.BUILD` are configured for this library path. 
+        **Ubuntu 20.04:**
 
-        **Ubuntu 20.04:** 
-        
+        &nbsp;
         - Ubuntu 20.04 may install the OpenCV and FFmpeg packages in `/usr/local`. Follow the instructions below to modify the `WORKSPACE`, `opencv_linux.BUILD` and `ffmpeg_linux.BUILD` to point MediaPipe to your own OpenCV and FFmpeg libraries. For example if OpenCV and FFmpeg are both manually installed in `/usr/local/`, you will need to update:
-          
+        &nbsp;
              > The `"new_local_repository"` rules for `"linux_opencv"` and `"linux_ffmpeg"` in `"WORKSPACE"`.
 
             > The `"cc_library"` rule for `"opencv"` in `"opencv_linux.BUILD"`
 
             > The `"cc_library"` rule for `"libffmpeg"` in `"ffmpeg_linux.BUILD"`
 
+        &nbsp;
         - An example below:
+                &nbsp;
 
                 new_local_repository(
                     name = "linux_opencv",
@@ -196,27 +263,31 @@ Some quick references to the guides and to the official tutorials of MediaPipe.
                     visibility = ["//visibility:public"],
                 )
 
+            &nbsp;
 
 6. **Install GPU acceleration dependancies**
 
+    &nbsp;
     - Requires a GPU with EGL driver support.
     - Can use mesa GPU libraries for desktop, (or Nvidia/AMD equivalent):
-
+        &nbsp;
         `sudo apt-get install mesa-common-dev libegl1-mesa-dev libgles2-mesa-dev`
+        &nbsp;
 
 7. **Compile (Hello Word! Example)**
 
+    &nbsp;
     - The build commands are the same as in the run, but it is important to build each code first to see any errors and because it will take some time.
     - Go into mediapipe installation folder.
-
+    &nbsp;
     - **Build with GPU Support:**
-
+        &nbsp;
         `bazelisk run --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/hello_world:hello_world`
-
+        &nbsp;
     - **Build with Only CPU:**
-
+        &nbsp;
         `bazelisk run --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/hello_world:hello_world`
-
+        &nbsp;
 
 ## GPU Support
 
@@ -225,31 +296,39 @@ Configure the system to enable OpenGL and Tensorflow. [Here](https://google.gith
 1. **OpenGL ES Support**
 
     MediaPipe supports OpenGL ES up to version 3.2 on Linux. On Linux desktop with video cards that support OpenGL ES 3.1+, MediaPipe can run GPU compute and rendering and perform TFLite inference on GPU.
-    
+    &nbsp;
     - Install dependancies:
-
+        &nbsp;
         `sudo apt-get install mesa-common-dev libegl1-mesa-dev libgles2-mesa-dev`
 
         `sudo apt-get install mesa-utils`
-    
-    - Grep OpenGL Info:
+        &nbsp;
 
+    - Grep OpenGL Info:
+        &nbsp;
         `glxinfo | grep -i opengl`
+        &nbsp;
 
             ...
             OpenGL ES profile version string: OpenGL ES 3.2 NVIDIA 430.50
             OpenGL ES profile shading language version string: OpenGL ES GLSL ES 3.20
             OpenGL ES profile extensions:
 
+    &nbsp;
     - You need to see ES 3.1 or greater printed in order to perform TFLite inference on GPU in MediaPipe.
+    &nbsp;
 
 1. **CUDA Support**
 
+    &nbsp;
     MediaPipe framework doesn’t require CUDA for GPU compute and rendering. However, MediaPipe can work with TensorFlow to perform GPU inference on video cards that support CUDA.
 
+    &nbsp;
     - Install CUDA and cuDNN following the [official nvidia guide](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html). (I used CUDA 11.0 Update 1 and cuDNN 8.1.1)
+    &nbsp;
 
     - Useful Links:
+        &nbsp;
 
         > [CUDA Installation Tutorial](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html)
 
@@ -259,37 +338,46 @@ Configure the system to enable OpenGL and Tensorflow. [Here](https://google.gith
 
         > [cuDNN Download Archive](https://developer.nvidia.com/rdp/cudnn-archive)
 
-    - Install [TensorFlow](https://github.com/tensorflow/tensorflow) and [onxx](https://pypi.org/project/onnx/):
+        &nbsp;
 
+    - Install [TensorFlow](https://github.com/tensorflow/tensorflow) and [onxx](https://pypi.org/project/onnx/):
+        &nbsp;
         `pip3 install tensorflow onxx`
+        &nbsp;
 
     - Install [PyTorch](https://pytorch.org/):
-
+        &nbsp;
         `pip3 install torch==1.8.1+cu111 torchvision==0.9.1+cu111 torchaudio==0.8.1 -f https://download.pytorch.org/whl/torch_stable.html`
+        &nbsp;
 
     - Install pycuda:
-
+        &nbsp;
         `pip3 install 'pycuda>=2019.1.1'`
+        &nbsp;
 
     - Install the correct version of TensorRT from [here](https://developer.nvidia.com/tensorrt) (I used TensorRT 7.2.3 for Ubuntu 18.04 and CUDA 11.0)
-
+        &nbsp;
         > [TensorRT Installation Tutorial](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html)
 
         > [TensorRT Download Archive](https://developer.nvidia.com/nvidia-tensorrt-7x-download)
 
+    &nbsp;
+
     - Add Following Lines to `.bashrc`:
-
+        &nbsp;
         `export PATH=/usr/local/cuda-11.0/bin${PATH:+:${PATH}}`
-
+        &nbsp;
         `export LD_LIBRARY_PATH=/usr/local/cuda/extras/CUPTI/lib64,/usr/local/cuda-11.0/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}`
-        
+        &nbsp;
         `export TF_CUDA_PATHS=/usr/local/cuda-11.0,/usr/lib/x86_64-linux-gnu,/usr/include`
+        &nbsp;
 
     - Run on terminal:
-
+        &nbsp;
         `sudo ldconfig`
-
-    - Edit the file `.bazelrc` in mediapipe installation directory addind the following lines:
+        &nbsp;
+    - Edit the file `.bazelrc` in mediapipe installation directory adding the following lines:
+        &nbsp;
 
             # This config refers to building with CUDA available. It does not necessarily
             # mean that we build CUDA op kernels.
@@ -300,379 +388,494 @@ Configure the system to enable OpenGL and Tensorflow. [Here](https://google.gith
             # This config refers to building CUDA op kernels with nvcc.
             build:cuda --config=using_cuda
             build:cuda --define=using_cuda_nvcc=true
+        &nbsp;
 
     - Finally, build MediaPipe with TensorFlow GPU with two more flags `--config=cuda` and `--spawn_strategy=local`:
-
+        &nbsp;
         `bazelisk build -c opt --config=cuda --spawn_strategy=local --define no_aws_support=true --copt -DMESA_EGL_NO_X11_HEADERS mediapipe/examples/desktop/object_detection:object_detection_tensorflow`
 
+## Run C++ Examples
 
-## MediaPipe in Python
+Export GLOG for Running Experiments:
 
-MediaPipe offers ready-to-use yet customizable Python solutions as a prebuilt Python package. MediaPipe Python package is available on PyPI for Linux, macOS and Windows.
+`export GLOG_logtostderr=1`
 
-1. **Install Dependancies**
+**MediaPipe support lot of pre-built examples:**
 
-    `sudo apt install python3-dev`
+- [Hello World](#Hello_World!)
+- [Face Detection](#Face_Detection)
+- [Face Mesh](#Face_Mesh)
+- [Iris](#Iris)
+- [Hand_Tracking](#Hand_Tracking)
+- [Pose](#Pose)
+- [Holistic](#Holistic)
+- [Selfie_Segmentation](#Selfie_Segmentation)
+- [Hair_Segmentation](#Hair_Segmentation)
+- [Object_Detection](#Object_Detection)
+- [Box_Tracking](#Box_Tracking)
+- [Instant_Motion_Tracking](#Instant_Motion_Tracking)
+- [Objectron](#Objectron)
+- [KNIFT](#KNIFT)
+- [AutoFlip](#AutoFlip)
+- [MediaSequence](#MediaSequence)
 
-    `sudo apt install -y protobuf-compiler`
+### <a name="Hello_World!"></a> Hello World
 
-2. **[OPTIONAL] Install and Use Python Virtual Enviroment**
+- **Run with GPU Support:**
+
+    &nbsp;
+    `bazelisk run --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/hello_world:hello_world`
+    &nbsp;
+
+- **Run with Only CPU:**
+
+    &nbsp;
+    `bazelisk run --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/hello_world:hello_world`
+    &nbsp;
+
+### <a name="Face_Detection"></a> Face Detection
+
+- **GPU Support**
+    &nbsp;
+
+    Build:
+
+    &nbsp;
+    `bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/face_detection:face_detection_gpu`
+    &nbsp;
+
+    Run:
+
+    &nbsp;
+    `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/face_detection/face_detection_gpu --calculator_graph_config_file=mediapipe/graphs/face_detection/face_detection_mobile_gpu.pbtxt`
+    &nbsp;
+
+- **Only CPU**
+    &nbsp;
+
+    Build:
+
+    &nbsp;
+    `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/face_detection:face_detection_cpu`
+    &nbsp;
+
+    Run:
+
+    &nbsp;
+    `bazel-bin/mediapipe/examples/desktop/face_detection/face_detection_cpu --calculator_graph_config_file=mediapipe/graphs/face_detection/face_detection_desktop_live.pbtxt`
+    &nbsp;
+
+### <a name="Face_Mesh"></a> Face Mesh
+
+Official [link](https://google.github.io/mediapipe/solutions/face_mesh.html).
+
+- **GPU Support**
+    &nbsp;
+
+    Build:
+
+    &nbsp;
+    `bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/face_mesh:face_mesh_gpu`
+    &nbsp;
+
+    Run:
+
+    &nbsp;
+    `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/face_mesh/face_mesh_gpu --calculator_graph_config_file=mediapipe/graphs/face_mesh/face_mesh_desktop_live_gpu.pbtxt`
+    &nbsp;
+
+- **Only CPU**
+    &nbsp;
+
+    Build:
+
+    &nbsp;
+    `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/face_mesh:face_mesh_cpu`
+    &nbsp;
+
+    Run:
+
+    &nbsp;
+    `bazel-bin/mediapipe/examples/desktop/face_mesh/face_mesh_cpu --calculator_graph_config_file=mediapipe/graphs/face_mesh/face_mesh_desktop_live.pbtxt`
+    &nbsp;
+
+### <a name="Iris"></a> Iris
+
+Official [link](https://google.github.io/mediapipe/solutions/iris.html).
+
+- **GPU Support**
+    &nbsp;
+
+    Build:
+
+    &nbsp;
+    `bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/iris_tracking:iris_tracking_gpu`
+    &nbsp;
+
+    Run:
+
+    &nbsp;
+    `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/iris_tracking/iris_tracking_gpu --calculator_graph_config_file=mediapipe/graphs/iris_tracking/iris_tracking_gpu.pbtxt`
+    &nbsp;
+
+- **Only CPU**
+    &nbsp;
+
+    Build:
+
+    &nbsp;
+    `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/iris_tracking:iris_tracking_cpu`
+    &nbsp;
+
+    Run:
+
+    `bazel-bin/mediapipe/examples/desktop/iris_tracking/iris_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/iris_tracking/iris_tracking_cpu.pbtxt`
+    &nbsp;
+
+### <a name="Hand_Tracking"></a> Hand Tracking
+
+Official [link](https://google.github.io/mediapipe/solutions/hands.html).
+
+- **GPU Support**
+    &nbsp;
+
+    Build:
+
+    &nbsp;
+    `bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/hand_tracking:hand_tracking_gpu`
+    &nbsp;
+
+    Run:
+
+    &nbsp;
+    `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/hand_tracking/hand_tracking_gpu --calculator_graph_config_file=mediapipe/graphs/hand_tracking/hand_tracking_desktop_live_gpu.pbtxt`
+    &nbsp;
+
+- **Only CPU**
+    &nbsp;
+
+    Build:
+
+    &nbsp;
+    `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/hand_tracking:hand_tracking_cpu`
+    &nbsp;
+
+    Run:
+
+    &nbsp;
+    `bazel-bin/mediapipe/examples/desktop/hand_tracking/hand_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/hand_tracking/hand_tracking_desktop_live.pbtxt`
+    &nbsp;
+
+### <a name="Pose"></a> Pose
+
+Official [link](https://google.github.io/mediapipe/solutions/pose).
+
+- **GPU Support**
+    &nbsp;
+
+    Build:
+
+    &nbsp;
+    `bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/pose_tracking:pose_tracking_gpu`
+    &nbsp;
+
+    Run:
+
+    &nbsp;
+    `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/pose_tracking/pose_tracking_gpu --calculator_graph_config_file=mediapipe/graphs/pose_tracking/pose_tracking_gpu.pbtxt`
+    &nbsp;
+
+- **Only CPU**
+    &nbsp;
+
+    Build:
+
+    &nbsp;
+    `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/pose_tracking:pose_tracking_cpu`
+    &nbsp;
+
+    Run:
+
+    &nbsp;
+    `bazel-bin/mediapipe/examples/desktop/pose_tracking/pose_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/pose_tracking/pose_tracking_cpu.pbtxt`
+    &nbsp;
+
+<!-- ### Pose - Upper-Body Only
+
+&nbsp;  
+Official [link](https://google.github.io/mediapipe/solutions/pose).
+&nbsp;
+
+- **GPU Support**
+    &nbsp;
+
+    Build:
+
+    &nbsp;
+    `bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/upper_body_pose_tracking:upper_body_pose_tracking_gpu`
+    &nbsp;
     
-    `sudo apt install python3-venv`
+    Run:
 
-    `python3 -m venv mp_env && source mp_env/bin/activate`
+    &nbsp;
+    `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/upper_body_pose_tracking/upper_body_pose_tracking_gpu --calculator_graph_config_file=mediapipe/graphs/pose_tracking/upper_body_pose_tracking_gpu.pbtxt`
+    &nbsp;
 
-3. **Install MediaPipe on pip**
+- **Only CPU**
+    &nbsp;
 
-    `pip3 install mediapipe`
+    Build:
 
-4. **Install Requirements**
-
-    `cd .../mediapipe`
-
-    `pip3 install -r requirements.txt`
-
-5. **Setup and Build**
-
-    `cd .../mediapipe`
-
-    `python3 setup.py gen_protos`
-
-    `python3 setup.py install --link-opencv`
+    &nbsp;
+    `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/upper_body_pose_tracking:upper_body_pose_tracking_cpu`
+    &nbsp;
     
-## Run Examples
+    Run:
 
-MediaPipe support lot of pre-built examples:
+    &nbsp;
+    `bazel-bin/mediapipe/examples/desktop/upper_body_pose_tracking/upper_body_pose_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/pose_tracking/upper_body_pose_tracking_cpu.pbtxt`
+    &nbsp; -->
 
-- **Export GLOG for Running**:
+### <a name="Holistic"></a> Holistic
 
-    `export GLOG_logtostderr=1`
+Official [link](https://google.github.io/mediapipe/solutions/holistic.html).
 
-- **Hello Word!**
+- **GPU Support**
+    &nbsp;
 
-  - **Run with GPU Support:**
+    Build:
 
-      `bazelisk run --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/hello_world:hello_world`
+    &nbsp;
+    `bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/holistic_tracking:holistic_tracking_gpu`
+    &nbsp;
 
-  - **Run with Only CPU:**
+    Run:
 
-      `bazelisk run --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/hello_world:hello_world`
+    &nbsp;
+    `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/holistic_tracking/holistic_tracking_gpu --calculator_graph_config_file=mediapipe/graphs/holistic_tracking/holistic_tracking_gpu.pbtxt`
+    &nbsp;
 
-- **Face Detection**
+- **Only CPU**
+    &nbsp;
 
-    - **GPU Support**
+    Build:
 
-        Build:
+    &nbsp;
+    `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/holistic_tracking:holistic_tracking_cpu`
+    &nbsp;
 
-        `bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/face_detection:face_detection_gpu`
-        
-        Run:
+    Run:
 
-        `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/face_detection/face_detection_gpu --calculator_graph_config_file=mediapipe/graphs/face_detection/face_detection_mobile_gpu.pbtxt`
+    &nbsp;
+    `bazel-bin/mediapipe/examples/desktop/holistic_tracking/holistic_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/holistic_tracking/holistic_tracking_cpu.pbtxt`
+    &nbsp;
 
-    - **Only CPU**
-
-        Build:
-
-        `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/face_detection:face_detection_cpu`
-        
-        Run:
-
-        `bazel-bin/mediapipe/examples/desktop/face_detection/face_detection_cpu --calculator_graph_config_file=mediapipe/graphs/face_detection/face_detection_desktop_live.pbtxt`
-
-- **Face Mesh**
-
-    Official [link](https://google.github.io/mediapipe/solutions/face_mesh.html).
-
-    - **GPU Support**
-
-        Build:
-
-        `bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/face_mesh:face_mesh_gpu`
-        
-        Run:
-
-        `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/face_mesh/face_mesh_gpu --calculator_graph_config_file=mediapipe/graphs/face_mesh/face_mesh_desktop_live_gpu.pbtxt`
-
-    - **Only CPU**
-
-        Build:
-
-        `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/face_mesh:face_mesh_cpu`
-        
-        Run:
-
-        `bazel-bin/mediapipe/examples/desktop/face_mesh/face_mesh_cpu --calculator_graph_config_file=mediapipe/graphs/face_mesh/face_mesh_desktop_live.pbtxt`
-
-- **Iris**
-
-    Official [link](https://google.github.io/mediapipe/solutions/iris.html).
-
-    - **GPU Support**
-
-        Build:
-
-        `bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/iris_tracking:iris_tracking_gpu`
-        
-        Run:
-
-        `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/iris_tracking/iris_tracking_gpu --calculator_graph_config_file=mediapipe/graphs/iris_tracking/iris_tracking_gpu.pbtxt`
-
-    - **Only CPU**
-
-        Build:
-
-        `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/iris_tracking:iris_tracking_cpu`
-        
-        Run:
-
-        `bazel-bin/mediapipe/examples/desktop/iris_tracking/iris_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/iris_tracking/iris_tracking_cpu.pbtxt`
-
-- **Hand Tracking**
-
-    Official [link](https://google.github.io/mediapipe/solutions/hands.html).
-
-    - **GPU Support**
-
-        Build:
-
-        `bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/hand_tracking:hand_tracking_gpu`
-        
-        Run:
-
-        `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/hand_tracking/hand_tracking_gpu --calculator_graph_config_file=mediapipe/graphs/hand_tracking/hand_tracking_desktop_live_gpu.pbtxt`
-
-    - **Only CPU**
-
-        Build:
-
-        `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/hand_tracking:hand_tracking_cpu`
-        
-        Run:
-
-        `bazel-bin/mediapipe/examples/desktop/hand_tracking/hand_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/hand_tracking/hand_tracking_desktop_live.pbtxt`
-
-- **Pose**
-
-    Official [link](https://google.github.io/mediapipe/solutions/pose).
-
-    - **GPU Support**
-
-        Build:
-
-        `bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/pose_tracking:pose_tracking_gpu`
-        
-        Run:
-
-        `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/pose_tracking/pose_tracking_gpu --calculator_graph_config_file=mediapipe/graphs/pose_tracking/pose_tracking_gpu.pbtxt`
-
-    - **Only CPU**
-
-        Build:
-
-        `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/pose_tracking:pose_tracking_cpu`
-        
-        Run:
-
-        `bazel-bin/mediapipe/examples/desktop/pose_tracking/pose_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/pose_tracking/pose_tracking_cpu.pbtxt`
-
-<!-- - **Pose - Upper-Body Only**
+### <a name="Selfie_Segmentation"></a> Selfie Segmentation
   
-    Official [link](https://google.github.io/mediapipe/solutions/pose).
+Official [link](https://google.github.io/mediapipe/solutions/selfie_segmentation.html).
 
-    - **GPU Support**
+- **GPU Support**
+    &nbsp;
 
-        Build:
+    Build:
 
-        `bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/upper_body_pose_tracking:upper_body_pose_tracking_gpu`
-        
-        Run:
+    &nbsp;
+    `bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/selfie_segmentation:selfie_segmentation_gpu`
+    &nbsp;
 
-        `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/upper_body_pose_tracking/upper_body_pose_tracking_gpu --calculator_graph_config_file=mediapipe/graphs/pose_tracking/upper_body_pose_tracking_gpu.pbtxt`
+    Run:
 
-    - **Only CPU**
+    &nbsp;
+    `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/selfie_segmentation/selfie_segmentation_gpu --calculator_graph_config_file=mediapipe/graphs/selfie_segmentation/selfie_segmentation_gpu.pbtxt`
+    &nbsp;
 
-        Build:
+- **Only CPU**
+    &nbsp;
 
-        `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/upper_body_pose_tracking:upper_body_pose_tracking_cpu`
-        
-        Run:
+    Build:
 
-        `bazel-bin/mediapipe/examples/desktop/upper_body_pose_tracking/upper_body_pose_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/pose_tracking/upper_body_pose_tracking_cpu.pbtxt` -->
+    &nbsp;
+    `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/selfie_segmentation:selfie_segmentation_cpu`
+    &nbsp;
 
-- **Holistic**
-  
-    Official [link](https://google.github.io/mediapipe/solutions/holistic.html).
+    Run:
 
-    - **GPU Support**
+    &nbsp;
+    `bazel-bin/mediapipe/examples/desktop/selfie_segmentation/selfie_segmentation_cpu --calculator_graph_config_file=mediapipe/graphs/selfie_segmentation/selfie_segmentation_cpu.pbtxt`
+    &nbsp;
 
-        Build:
+### <a name="Hair_Segmentation"></a> Hair Segmentation
 
-        `bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/holistic_tracking:holistic_tracking_gpu`
-        
-        Run:
+Official [link](https://google.github.io/mediapipe/solutions/hair_segmentation.html).
 
-        `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/holistic_tracking/holistic_tracking_gpu --calculator_graph_config_file=mediapipe/graphs/holistic_tracking/holistic_tracking_gpu.pbtxt`
+- **GPU Support**
+    &nbsp;
 
-    - **Only CPU**
+    Build:
 
-        Build:
+    &nbsp;
+    `bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/hair_segmentation:hair_segmentation_gpu`
+    &nbsp;
 
-        `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/holistic_tracking:holistic_tracking_cpu`
-        
-        Run:
+    Run:
 
-        `bazel-bin/mediapipe/examples/desktop/holistic_tracking/holistic_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/holistic_tracking/holistic_tracking_cpu.pbtxt`
+    &nbsp;
+    `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/hair_segmentation/hair_segmentation_gpu --calculator_graph_config_file=mediapipe/graphs/hair_segmentation/hair_segmentation_mobile_gpu.pbtxt`
+    &nbsp;
 
-- **Selfie Segmentation**
-  
-    Official [link](https://google.github.io/mediapipe/solutions/selfie_segmentation.html).
+- **Only CPU**
+    &nbsp;
 
-    - **GPU Support**
+    N/A
+    &nbsp;
 
-        Build:
+### <a name="Object_Detection"></a> Object Detection
 
-        `bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/selfie_segmentation:selfie_segmentation_gpu`
-        
-        Run:
+Official [link](https://google.github.io/mediapipe/solutions/object_detection.html).
 
-        `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/selfie_segmentation/selfie_segmentation_gpu --calculator_graph_config_file=mediapipe/graphs/selfie_segmentation/selfie_segmentation_gpu.pbtxt`
+- **GPU Support**
+    &nbsp;
 
-    - **Only CPU**
+    N/A
+    &nbsp;
 
-        Build:
+- **Only CPU**
+    &nbsp;
 
-        `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/selfie_segmentation:selfie_segmentation_cpu`
-        
-        Run:
+    Build:
 
-        `bazel-bin/mediapipe/examples/desktop/selfie_segmentation/selfie_segmentation_cpu --calculator_graph_config_file=mediapipe/graphs/selfie_segmentation/selfie_segmentation_cpu.pbtxt`
+    &nbsp;
+    `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/object_detection:object_detection_cpu`
+    &nbsp;
 
-- **Hair Segmentation**
+    Run:
 
-    Official [link](https://google.github.io/mediapipe/solutions/hair_segmentation.html).
+    &nbsp;
+    `bazel-bin/mediapipe/examples/desktop/object_detection/object_detection_cpu --calculator_graph_config_file=mediapipe/graphs/object_detection/object_detection_desktop_live.pbtxt`
+    &nbsp;
 
-    - **GPU Support**
+### <a name="Box_Tracking"></a> Box Tracking
 
-        Build:
+Official [link](https://google.github.io/mediapipe/solutions/box_tracking.html).
 
-        `bazel build -c opt --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 mediapipe/examples/desktop/hair_segmentation:hair_segmentation_gpu`
-        
-        Run:
+- **GPU Support**
+    &nbsp;
 
-        `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/hair_segmentation/hair_segmentation_gpu --calculator_graph_config_file=mediapipe/graphs/hair_segmentation/hair_segmentation_mobile_gpu.pbtxt`
+    N/A
+    &nbsp;
 
-    - **Only CPU**
+- **Only CPU**
+    &nbsp;
 
-        N/A
+    Build:
 
-- **Object Detection**
+    &nbsp;
+    `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/object_tracking:object_tracking_cpu`
+    &nbsp;
 
-    Official [link](https://google.github.io/mediapipe/solutions/object_detection.html).
+    Run:
 
-    - **GPU Support**
+    &nbsp;
+    `bazel-bin/mediapipe/examples/desktop/object_tracking/object_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/tracking/object_detection_tracking_desktop_live.pbtxt`
+    &nbsp;
 
-        N/A
+### <a name="Instant_Motion_Tracking"></a> Instant Motion Tracking
 
-    - **Only CPU**
+Official [link](https://google.github.io/mediapipe/solutions/instant_motion_tracking.html)
 
-        Build:
+- **GPU Support**
+    &nbsp;
 
-        `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/object_detection:object_detection_cpu`
-        
-        Run:
+    N/A
+    &nbsp;
 
-        `bazel-bin/mediapipe/examples/desktop/object_detection/object_detection_cpu --calculator_graph_config_file=mediapipe/graphs/object_detection/object_detection_desktop_live.pbtxt`
+- **Only CPU**
+    &nbsp;
 
-- **Box Tracking**
+    N/A
+    &nbsp;
 
-    Official [link](https://google.github.io/mediapipe/solutions/box_tracking.html).
+### <a name="Objectron"></a> Objectron
 
-    - **GPU Support**
+Official [link](https://google.github.io/mediapipe/solutions/objectron.html).
 
-        N/A
+- **GPU Support**
+    &nbsp;
 
-    - **Only CPU**
+    N/A
+    &nbsp;
 
-        Build:
+- **Only CPU**
+    &nbsp;
 
-        `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/object_tracking:object_tracking_cpu`
-        
-        Run:
+    Build:
 
-        `bazel-bin/mediapipe/examples/desktop/object_tracking/object_tracking_cpu --calculator_graph_config_file=mediapipe/graphs/tracking/object_detection_tracking_desktop_live.pbtxt`
+    &nbsp;
+    `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/object_detection_3d:objectron_cpu`
+    &nbsp;
 
-- **Instant Motion Tracking**
+    Run:
 
-    Official [link](https://google.github.io/mediapipe/solutions/instant_motion_tracking.html)
+    &nbsp;
+    `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/object_detection_3d/objectron_cpu --calculator_graph_config_file=mediapipe/graphs/object_detection_3d/objectron_desktop_cpu.pbtxt --input_side_packets=input_video_path=<input video path>,output_video_path=<output video path>,box_landmark_model_path=<landmark model path>,allowed_labels=<allowed labels>`
+    &nbsp;
 
-    - **GPU Support**
+### <a name="KNIFT"></a> KNIFT
 
-        N/A
+Official [link](https://google.github.io/mediapipe/solutions/knift.html).
 
-    - **Only CPU**
+- **GPU Support**
+    &nbsp;
 
-        N/A
+    N/A
+    &nbsp;
 
-- **Objectron**
+- **Only CPU**
+    &nbsp;
 
-    Official [link](https://google.github.io/mediapipe/solutions/objectron.html).
+    N/A
+    &nbsp;
 
-    - **GPU Support**
+### <a name="AutoFlip"></a> AutoFlip
 
-        N/A
+Official [link](https://google.github.io/mediapipe/solutions/autoflip.html).
 
-    - **Only CPU**
+- **GPU Support**
+    &nbsp;
 
-        Build:
+    N/A
+    &nbsp;
 
-        `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/object_detection_3d:objectron_cpu`
-        
-        Run:
+- **Only CPU**
+    &nbsp;
 
-        `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/object_detection_3d/objectron_cpu --calculator_graph_config_file=mediapipe/graphs/object_detection_3d/objectron_desktop_cpu.pbtxt --input_side_packets=input_video_path=<input video path>,output_video_path=<output video path>,box_landmark_model_path=<landmark model path>,allowed_labels=<allowed labels>`
+    Build:
 
-- **KNIFT**
+    &nbsp;
+    `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/autoflip:run_autoflip`
+    &nbsp;
 
-    Official [link](https://google.github.io/mediapipe/solutions/knift.html).
+    Run:
 
-    - **GPU Support**
+    &nbsp;
+    `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/autoflip/run_autoflip --calculator_graph_config_file=mediapipe/examples/desktop/autoflip/autoflip_graph.pbtxt --input_side_packets=input_video_path=/absolute/path/to/the/local/video/file,output_video_path=/absolute/path/to/save/the/output/video/file,aspect_ratio=1:1`
+    &nbsp;
 
-        N/A
+### <a name="MediaSequence"></a> MediaSequence
 
-    - **Only CPU**
+Official [link](https://google.github.io/mediapipe/solutions/media_sequence.html).
 
-        N/A
+- **GPU Support**
+    &nbsp;
 
-- **AutoFlip**
+    N/A
+    &nbsp;
 
-    Official [link](https://google.github.io/mediapipe/solutions/autoflip.html).
+- **Only CPU**
+    &nbsp;
 
-    - **GPU Support**
+    Build:
 
-        N/A
-
-    - **Only CPU**
-
-        Build:
-
-        `bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/examples/desktop/autoflip:run_autoflip`
-        
-        Run:
-
-        `GLOG_logtostderr=1 bazel-bin/mediapipe/examples/desktop/autoflip/run_autoflip --calculator_graph_config_file=mediapipe/examples/desktop/autoflip/autoflip_graph.pbtxt --input_side_packets=input_video_path=/absolute/path/to/the/local/video/file,output_video_path=/absolute/path/to/save/the/output/video/file,aspect_ratio=1:1`
-
-- **MediaSequence**
-
-    Official [link](https://google.github.io/mediapipe/solutions/media_sequence.html).
-
-    - **GPU Support**
-
-        N/A
-
-    - **Only CPU**
-
-        Build:
-
-        `bazel build -c opt mediapipe/examples/desktop/media_sequence:media_sequence_demo --define MEDIAPIPE_DISABLE_GPU=1`
-
+    &nbsp;
+    `bazel build -c opt mediapipe/examples/desktop/media_sequence:media_sequence_demo --define MEDIAPIPE_DISABLE_GPU=1`
+    &nbsp;
