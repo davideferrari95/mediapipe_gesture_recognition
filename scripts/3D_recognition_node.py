@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import rospy, rospkg
 import numpy as np
 import pickle, warnings

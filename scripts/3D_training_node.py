@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os, time
 import rospy, rospkg
 import numpy as np
