@@ -100,9 +100,14 @@ include_directories(
 
 install(PROGRAMS 
   scripts/mediapipe_stream_node.py
-  scripts/2D_training_node.py
-  scripts/2D_recognition_node.py
-  scripts/3D_training_node.py
-  scripts/3D_recognition_node.py
+  scripts/mediapipe_video_node.py
+  scripts/xy_training_node.py
+  scripts/xy_recognition_node.py
+  scripts/xyz_training_node.py
+  scripts/xyz_recognition_node.py
+  scripts/xyz_Precognition_node.py
+  scripts/xyz_Ptraining_node.py
+  scripts/xyz_videotraining_node.py
+
   DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}
 )

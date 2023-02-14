@@ -1,7 +1,7 @@
 import rospy
 
 # Countdown Function
-def countdown(self, num_of_secs):
+def countdown(num_of_secs):
 
     print("\nAcquisition Starts in:")
 

@@ -139,6 +139,8 @@ class MediapipeStreaming:
         # Append Keypoint
         hand_msg.keypoints.append(self.newKeypoint(handResults.right_hand_landmarks.landmark[i] if RightLeft else handResults.left_hand_landmarks.landmark[i], 
                                                    i, self.hand_landmarks_names[i]))
+      
+      #print(hand_msg)       Trying to indentify the right amount of keypoints number 
 
       # Publish Hand Keypoint Message
       self.hand_right_pub.publish(hand_msg) if RightLeft else self.hand_left_pub.publish(hand_msg)
@@ -164,6 +166,8 @@ class MediapipeStreaming:
 
         # Append Keypoint
         pose_msg.keypoints.append(self.newKeypoint(poseResults.pose_landmarks.landmark[i], i, self.pose_landmarks_names[i]))
+      
+      #print(pose_msg)  Trying to indentify the right amount of keypoints number 
 
       # Publish Pose Keypoint Message
       self.pose_pub.publish(pose_msg)    
@@ -202,7 +206,8 @@ class MediapipeStreaming:
 
         # Append Keypoint
         face_msg.keypoints.append(new_keypoint)
-
+      
+      #print(face_msg)                Trying to indentify the right amount of keypoints number 
       self.face_pub.publish(face_msg)
       
       
