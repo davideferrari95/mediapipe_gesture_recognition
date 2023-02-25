@@ -30,10 +30,10 @@ add_message_files(
 )
 
 ## Generate services in the 'srv' folder
-add_service_files(
-  FILES
-  VideoSequence.srv
-)
+# add_service_files(
+#   FILES
+#   VideoSequence.srv
+# )
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -100,23 +100,20 @@ include_directories(
 
 install(PROGRAMS 
 
-  scripts/mediapipe_stream_node.py
-  scripts/mediapipe_video_node.py
-  useful_scripts/xy_training_node.py
-  useful_scripts/xy_recognition_node.py
-  scripts/xyz_training_node.py
-  scripts/xyz_recognition_node.py
-  scripts/xyz_Precognition_node.py
-  scripts/xyz_Ptraining_node.py
-  scripts/xyz_videotraining_node.py
+#Streams Node
+scripts/mediapipe_stream_node.py
+scripts/mediapipe_video_node.py
 
-  #I needed these two scripts
-  scripts/old_mediapipe_video_node.py
-  scripts/old_xyz_videotraining_node.py
+#Training node
+scripts/pytorch_training_node.py
+scripts/pytorch_videotraining_node.py
+scripts/tensorflow_training_node.py
+scripts/tensorflow_videotraining_node.py
 
-  #new file
-  scripts/new_mediapipe_video_node.py
-  scripts/new_xyz_videotraining_node.py
+#Recognition node
+scripts/pytorch_recognition_node.py
+scripts/tensorflow_recognition_node.py
+
 
   DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}
 )
