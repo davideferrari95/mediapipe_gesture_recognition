@@ -3,7 +3,8 @@
 
 #Useful libreries
 import rospy, rospkg, numpy as np, pickle, warnings, os
-from xyz_Ptraining_node import NeuralNetwork, CustomDataset, GestureRecognitionTraining3D, countdown
+from pytorch_videotraining_node import NeuralNetwork, CustomDataset, GestureRecognitionTraining3D 
+from Utils import countdown
 
 #Pytorch libreries
 import torch
@@ -81,8 +82,8 @@ class GestureRecognition3D:
             message = getattr(self, message_name)
             
             # Extend Landmark Vector -> Saving New Keypoints 
-            Landmarks.append(np.array([[value.x, value.y, value.z, value.v] for value in message.keypoints]).flatten() if message else np.zeros(33*4))
-            #Landmarks.append(np.zeros(468 * 3) if message is None else np.array([[res.x, res.y, res.z, res.v] for res in message.keypoints]).flatten())
+            #Landmarks.append(np.array([[value.x, value.y, value.z, value.v] for value in message.keypoints]).flatten() if message else np.zeros(33*4))
+            Landmarks.append(np.zeros(468 * 3) if message is None else np.array([[res.x, res.y, res.z, res.v] for res in message.keypoints]).flatten())
 
         return Landmarks
 
@@ -91,6 +92,7 @@ class GestureRecognition3D:
     def Recognition(self):
         
         with torch.no_grad():
+
             # Coordinate Vector
             Landmarks = []
             
@@ -100,7 +102,6 @@ class GestureRecognition3D:
             Landmarks = self.process_landmarks(self.enable_pose, 'pose_new_msg', Landmarks)
             Landmarks = self.process_landmarks(self.enable_face, 'face_new_msg', Landmarks)
             
-    
             # Concatenate Landmarks Vectors
             keypoints = np.concatenate(Landmarks)
     

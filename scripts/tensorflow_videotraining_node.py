@@ -131,10 +131,6 @@ class GestureRecognitionTraining3D:
 
 
         print('Model Saved Correctly')
-       
-
-
-
 ############################################################
 #             Neural Newtork by Pytorch lightining         #
 ############################################################

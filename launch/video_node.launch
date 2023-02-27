@@ -27,6 +27,6 @@
     <param name="objectron_model"       value="$(arg objectron_model)"/>
 
     <!-- Mediapipe Stream Node  -->
-    <node pkg="mediapipe_gesture_recognition" type="new_mediapipe_video_node.py" name="new_mediapipe_video_node" output="screen"/> 
+    <node pkg="mediapipe_gesture_recognition" type="mediapipe_video_node.py" name="mediapipe_video_node" output="screen"/> 
 
 </launch>

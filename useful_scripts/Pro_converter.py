@@ -42,17 +42,18 @@ for subfolder_name in os.listdir(root_path):
        # Define the input and output paths
        input_path = os.path.join(root_path, subfolder_name)
 
-       output_path = os.path.join(subfolder_path, subfolder_name + ".mp4")
+       output_path = os.path.join(subfolder_path, subfolder_name + ".avi")
        
        #Debug print
        print("\nI'm taking the frames from the subfolder:", subfolder_number, "in this path", input_path, "\n")
        print("I'm make the video in the subfolder", subfolder_label, "in this path", output_path, "\n")
        
+
        # Create VideoWriter object
-       out = cv2.VideoWriter(output_path, fourcc, 10.0, (176,100))
+       out = cv2.VideoWriter(output_path, fourcc, len(os.listdir(input_path))/3, (176*2,100*2))
    
        # Iterate through the images in the subfolder
-       for filename in os.listdir(input_path):
+       for filename in sorted(os.listdir(input_path)):
 
            #Choose only the .jpg file to merge 
            if filename.endswith('.jpg'):
@@ -60,7 +61,7 @@ for subfolder_name in os.listdir(root_path):
                # Read the image
                img = cv2.imread(os.path.join(input_path, filename))
                # Resize the image
-               img = cv2.resize(img, (176, 100))
+               img = cv2.resize(img, (176*2, 100*2))
                # Write the image to the VideoWriter
                out.write(img)
 

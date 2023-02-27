@@ -3,6 +3,6 @@
     <arg name="3D_gesture_recognition" default="True"/>
     
     <!-- Mediapipe 3D Gesture Recognition Training Node -->
-    <node pkg="mediapipe_gesture_recognition" type="xyz_training_node.py" name="xyz_training_node" output="screen"/>
+    <node pkg="mediapipe_gesture_recognition" type="new_xyz_training_node.py" name="new_xyz_training_node" output="screen"/>
 
 </launch>

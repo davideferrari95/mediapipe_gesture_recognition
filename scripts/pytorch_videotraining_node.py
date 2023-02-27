@@ -84,10 +84,8 @@ class GestureRecognitionTraining3D:
                 npy_path = os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(sequence))
                 totframe = len(os.listdir(npy_path))
 
-                
-
                 # Loop Over Frames
-                for frame_num in range(totframe-27, totframe): #Take the last 30Frames 
+                for frame_num in range(0, totframe): #Take the last 30Frames 
                     
                     # Load Frame
                     frame.append(np.load(os.path.join(npy_path, str(frame_num)+".npy")))
@@ -128,7 +126,8 @@ class GestureRecognitionTraining3D:
         # Split Dataset 
         self.X_train, self.X_rim, self.Y_train, self.Y_rim = SKLearnModelSelection.train_test_split(X, Y, test_size=0.1)
         self.X_val, self.X_test, self.Y_val, self.Y_test = SKLearnModelSelection.train_test_split(self.X_rim,self.Y_rim, test_size=0.5)
-
+        
+        # Print Dataset Shape
         print(self.X_train.shape)
         print(self.X_test.shape)
         print(self.X_val.shape)
@@ -147,9 +146,8 @@ class GestureRecognitionTraining3D:
         self.Y_val = torch.from_numpy(self.Y_val).float()
 
       
-
         # Create Model
-        model = NeuralNetwork((30,self.X_test.shape[-1]), gestures.shape[0], self.X_train, self.Y_train, self.X_val, self.Y_val, self.X_test, self.Y_test)
+        model = NeuralNetwork((40, self.X_test.shape[-1]), gestures.shape[0], self.X_train, self.Y_train, self.X_val, self.Y_val, self.X_test, self.Y_test)
         
         # Create Trainer 
         trainer = Trainer(
@@ -157,7 +155,7 @@ class GestureRecognitionTraining3D:
                    max_epochs = 250, 
                    fast_dev_run = False, 
                    log_every_n_steps=1, 
-                   #callbacks=[EarlyStopping(monitor="val_loss", stopping_threshold = 0.1)]
+                   callbacks=[EarlyStopping(monitor="val_loss", stopping_threshold = 0.1)]
                                  )    
         
         # Train Model
