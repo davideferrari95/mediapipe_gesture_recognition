@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-import rospy, cv2, os, pandas as pd, mediapipe as mp, re 
-from mediapipe_gesture_recognition.msg import Pose, Face, Keypoint, Hand
-from std_msgs.msg import String
+import rospy, cv2, os, pandas as pd, mediapipe as mp, datetime, numpy as np, rospkg
+from mediapipe_gesture_recognition.msg import Pose, Face, Keypoint, Hand, Frame
+
 
 '''
 To Obtain The Available Cameras: 
@@ -24,6 +24,7 @@ VGA WebCam: VGA WebCam (usb-0000:00:14.0-5):
 
 class MediapipeStreaming:
   
+
   def __init__(self, webcam, enable_right_hand = False, enable_left_hand = False, \
                              enable_pose = False, enable_face = False, enable_face_detection = False, \
                              enable_objectron = False, objectron_model = 'Shoe'):
@@ -33,8 +34,10 @@ class MediapipeStreaming:
     self.hand_left_pub   = rospy.Publisher('/mediapipe_gesture_recognition/left_hand', Hand, queue_size=1)
     self.pose_pub        = rospy.Publisher('/mediapipe_gesture_recognition/pose', Pose, queue_size=1)
     self.face_pub        = rospy.Publisher('/mediapipe_gesture_recognition/face', Face, queue_size=1)
-    self.label_pub       = rospy.Publisher('/mediapipe_gesture_recognition/gesture', String, queue_size=1)
     
+    # Get Package Path
+    self.package_path = rospkg.RosPack().get_path('mediapipe_gesture_recognition')    
+
     # Constants
     self.RIGHT_HAND = True
     self.LEFT_HAND = False
@@ -83,6 +86,24 @@ class MediapipeStreaming:
     # Open Video Folder
     self.path = '/home/alberto/catkin_ws/src/mediapipe_gesture_recognition/dataset/Video_with_labels/'
     self.stream_phase = True
+    
+    #Initialise the walk
+    self.framenumber = 0
+    self.gesture_name = ''
+    self.video_number = ''
+
+    # Read Mediapipe Modules Parameters
+    self.enable_right_hand = rospy.get_param('enable_right_hand', False)
+    self.enable_left_hand = rospy.get_param('enable_left_hand',  False)
+    self.enable_pose = rospy.get_param('enable_pose', False)
+    self.enable_face = rospy.get_param('enable_face', False)
+
+    # Select Gesture File
+    self.gesture_file = ''
+    if self.enable_right_hand: self.gesture_file += 'Right'
+    if self.enable_left_hand:  self.gesture_file += 'Left'
+    if self.enable_pose:       self.gesture_file += 'Pose'
+    if self.enable_face:       self.gesture_file += 'Face'
 
     
     # Check Webcam Availability
@@ -144,7 +165,8 @@ class MediapipeStreaming:
       #print(hand_msg)       Trying to indentify the right amount of keypoints number 
 
       # Publish Hand Keypoint Message
-      self.hand_right_pub.publish(hand_msg) if RightLeft else self.hand_left_pub.publish(hand_msg)
+      # self.hand_right_pub.publish(hand_msg) if RightLeft else self.hand_left_pub.publish(hand_msg)
+      return hand_msg
 
   def processPose(self, poseResults, image):
         
@@ -171,7 +193,8 @@ class MediapipeStreaming:
       #print(pose_msg)  Trying to indentify the right amount of keypoints number 
 
       # Publish Pose Keypoint Message
-      self.pose_pub.publish(pose_msg)    
+      # self.pose_pub.publish(pose_msg)    
+      return pose_msg 
 
   def processFace(self, faceResults, image):
       
@@ -209,7 +232,7 @@ class MediapipeStreaming:
         face_msg.keypoints.append(new_keypoint)
       
       #print(face_msg)                Trying to indentify the right amount of keypoints number 
-      self.face_pub.publish(face_msg)
+      return face_msg
       
       
 ############################################################
@@ -251,6 +274,21 @@ class MediapipeStreaming:
 #                    Process Functions                     #
 ############################################################
 
+  def flattenKeypoints(self, pose_msg, left_msg, right_msg, face_msg):   #Mi servirà?
+        '''
+        Flatten Incoming Messages of Create zeros Vector \n
+        Concatenate each Output
+        '''
+
+        # Check if messages are available and create zeros vectors if not
+        pose = np.zeros(33 * 4) if pose_msg is None else np.array([[res.x, res.y, res.z, res.v] for res in pose_msg.keypoints]).flatten()
+        left_h = np.zeros(21 * 4) if left_msg is None else np.array([[res.x, res.y, res.z, res.v] for res in left_msg.keypoints]).flatten()
+        right_h = np.zeros(21 * 4) if right_msg is None else np.array([[res.x, res.y, res.z, res.v] for res in right_msg.keypoints]).flatten()
+        face = np.zeros(468 * 3) if face_msg is None else np.array([[res.x, res.y, res.z, res.v] for res in face_msg.keypoints]).flatten()
+
+        # Concatenate Data
+        return np.concatenate([right_h, left_h, pose, face])
+
   def initSolutions(self):
         
     # Initialize Mediapipe Holistic
@@ -279,25 +317,98 @@ class MediapipeStreaming:
       if self.enable_objectron: self.objectron_results = self.objectron.process(image)
   
   def processResults(self, image):
+    
+    #Instance a ROS frame message
+    frame_msg = Frame()
         
     # Process Left Hand Landmarks
-    if self.enable_left_hand:  self.processHand(self.LEFT_HAND,  self.holistic_results, image)
+    if self.enable_left_hand:  frame_msg.left_hand = self.processHand(self.LEFT_HAND,  self.holistic_results, image)
       
     # Process Right Hand Landmarks
-    if self.enable_right_hand: self.processHand(self.RIGHT_HAND, self.holistic_results, image)
+    if self.enable_right_hand:  frame_msg.right_hand = self.processHand(self.RIGHT_HAND, self.holistic_results, image)
 
     # Process Pose Landmarks
-    if self.enable_pose: self.processPose(self.holistic_results, image)
-      
+    if self.enable_pose:  frame_msg.pose = self.processPose(self.holistic_results, image)
+
     # Process Face Landmarks
-    if self.enable_face: self.processFace(self.holistic_results, image)
-      
+    if self.enable_face: frame_msg.face = self.processFace(self.holistic_results, image)
+
+    #Flat all the keypoints
+    sequence = self.flattenKeypoints(frame_msg.pose, frame_msg.left_hand, frame_msg.right_hand, frame_msg.face)
+    
     # Process Face Detection
     if self.enable_face_detection: self.processFaceDetection(self.face_detection_results, image)
 
     # Process Objectron
     if self.enable_objectron: self.processObjectron(self.objectron_results, image)
+
+    #Return the frame keypoints
+    return sequence
       
+
+
+############################################################
+#                    Data Save Functions                   #
+############################################################
+  def recordVideos(self, gesture, video_number, sequence):
+        
+    self.framenumber = 0 
+    self.videonumber = 0
+    '''
+    Loop to save the landmarks coordintates for each frame of each video
+    The loop continue until the service response keep itself true with a 30FPS
+    '''
+
+    #Create a gesture folder 
+    try: 
+     os.makedirs(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture))
+    except: pass       #In teoria makedirs se la cartella esiste va già dritta 
+    
+    #Create a number folder for each video of the current gesture 
+    try:
+     os.makedirs(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(video_number)))
+    except: pass 
+       
+    # Flatten and Concatenate Keypoints (Insert your gesture source here) (here the missing sources self.pose_new_msg, self.face_new_msg, self.right_new_msg)
+    keypoints = sequence   
+       
+    # Export Keypoints Values in the Correct Folder
+    npy_path = os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(video_number), str(self.framenumber))
+       
+    #Check if this frame number exists and iterate the frame numbers until the right framenumbers
+    while os.path.exists(npy_path + '.npy'): 
+     self.framenumber = int(self.framenumber) + 1
+     npy_path = os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(video_number), str(self.framenumber))
+                
+    #Save the keypoints in the correct folder
+    np.save(npy_path, keypoints)
+    
+    #Print the current gesture and the video number
+    print(f'\nCollecting Frames for {gesture} | Video Number: {video_number}  | Frame number:{self.framenumber}')
+
+  def npyfileFiller(self, gesture, video_number):
+   
+   #Check if the video number is not empty
+   if not video_number == '':
+
+    #Get the number of npy files in the current gesture folder
+    npy_path = os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(video_number)) 
+    npyfilenumber = os.listdir(npy_path)
+    npyfilenumber = len(npyfilenumber)
+
+    #Check if the npy file number is less than 40
+    if npyfilenumber < 40:
+
+     #Load the last npy file 
+     data = np.load(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(video_number), str(npyfilenumber -1)+".npy"))
+
+     #Copy the last npy file to obtain 40 npy files to train the NN
+     for i in range (40 - npyfilenumber):
+       np.save(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(video_number), str(npyfilenumber + i)), data)
+  
+   
+   
+
 ############################################################
 #                       Main Spinner                       #
 ############################################################
@@ -306,75 +417,83 @@ class MediapipeStreaming:
       
     # Initialize Mediapipe Solutions (Holistic, Face Detection, Objectron)
     self.initSolutions()
+    
+    #Take your time Mediapipe 
+    rospy.sleep(3) 
+    
+    print('Starting Collection')
 
     #Read every file in the directory
-    for root, dirs, files in os.walk(self.path):
-      
+    for root, dirs, files in sorted(os.walk(self.path)):
+        
       #Get the current subfolder
       current_subdir = os.path.basename(root)
-      
-      #Take the gesture name from the current folder
-      gesture_name = os.path.splitext(current_subdir)[0]
-
-      #Print the current observed gesture
-      print("Current gesture:", gesture_name)
-      
-      #Publish the current observed gesture to train node
-      self.label_pub.publish(gesture_name)
-
+    
       #Read every video in every subfolder 
       for filename in files:
+        
+        #Fill the frames gap
+        self.npyfileFiller(self.gesture_name, self.video_number) 
 
-            # Check if the file is a video
-            if not filename.endswith(('.mp4', '.avi', '.mov')):
-                continue
-            
-            # Get the full path of the video for each gesture
-            video_path = os.path.join(root, filename)
+        #Take the gesture name from the current folder
+        self.gesture_name = os.path.splitext(current_subdir)[0]
 
-            # Open the video
-            self.cap = cv2.VideoCapture(video_path)
+        #Take the video number 
+        self.video_number = os.path.splitext(filename)[0]
 
+        #Print the current observed video
+        #print("\nCurrent gesture:", gesture_name,"Current video:", video_number)
 
-            while self.cap.isOpened() and not rospy.is_shutdown():
+        # Check if the file is a video
+        if not filename.endswith(('.mp4', '.avi', '.mov')):
+            continue
+                        
+        # Get the full path of the video for each gesture
+        video_path = os.path.join(root, filename)
+        
+        # Open the video
+        self.cap = cv2.VideoCapture(video_path)
+        
+        while self.cap.isOpened() and not rospy.is_shutdown():
+    
+          # Read Webcam Im
+          success, image = self.cap.read()
+          
+          if not success:
+           print('Ignoring empty camera frame.')
+           break
+           # If loading a video, use 'break' instead of 'continue'.
+           #continue 
 
-                # Read Webcam Im
-                success, image = self.cap.read()
-                
-                if not success:
-                 print('Ignoring empty camera frame.')
-                 break
-                 # If loading a video, use 'break' instead of 'continue'.
-                 #continue 
+          # To Improve Performance -> Process the Image as Not-Writeable
+          image.flags.writeable = False
+          image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+          
+          # Get Mediapipe Result
+          self.getResults(image)
+          
+          # To Draw the Annotations -> Set the Image Writable
+          image.flags.writeable = True
+          image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+          
+          # Process Mediapipe Results
+          sequence = self.processResults(image)
+          
+          # Flip the image horizontally for a selfie-view display.
+          cv2.imshow('MediaPipe Landmarks', cv2.flip(image, 1))
+          if cv2.waitKey(5) & 0xFF == 27:
+            break
+          
+          #Save Data
+          self.recordVideos(self.gesture_name,self.video_number,sequence)
 
-                # To Improve Performance -> Process the Image as Not-Writeable
-                image.flags.writeable = False
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                
-                # Get Mediapipe Result
-                self.getResults(image)
-                
-                # To Draw the Annotations -> Set the Image Writable
-                image.flags.writeable = True
-                image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                
-                # Process Mediapipe Results
-                self.processResults(image)
-                
-                # Flip the image horizontally for a selfie-view display.
-                cv2.imshow('MediaPipe Landmarks', cv2.flip(image, 1))
-                if cv2.waitKey(5) & 0xFF == 27:
-                  break
-
-      
-
+    self.npyfileFiller(self.gesture_name, self.video_number) 
+    
+    #Print the finish of all videos
     print("Videos Finished")
+
     self.stream_phase = False
-    
-
-    
-
-
+  
 ############################################################
 #                    ROS Initialization                    #
 ############################################################
@@ -410,7 +529,7 @@ def initROS(name, rate):
 ############################################################
 #                           Main                           #
 ############################################################
-  
+
 if __name__ == '__main__':
   
   initROS('mediapipe_stream_node', 30)
