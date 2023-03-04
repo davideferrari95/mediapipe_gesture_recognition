@@ -2,8 +2,8 @@ import os, cv2, csv
 import pandas as pd
 from termcolor import colored
 
-# Working Path
-PROJECT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Working Path (__file__: script/utils/dataset_converter.py)
+PROJECT_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATASET_PATH = f'{PROJECT_PATH}/dataset/20bn-jester-v1'
 OUTPUT_PATH  = f'{PROJECT_PATH}/dataset/Video'
 CSV_PATH     = f'{PROJECT_PATH}/dataset/Labels'
