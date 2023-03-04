@@ -1,73 +1,76 @@
-import os
-import cv2, csv
+import os, cv2, csv
+import pandas as pd
+from termcolor import colored
 
-# Gesture frames folder path
-root_path = '/home/alberto/catkin_ws/src/mediapipe_gesture_recognition/dataset/Gesture_frames'
+# Working Path
+PROJECT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATASET_PATH = f'{PROJECT_PATH}/dataset/20bn-jester-v1'
+OUTPUT_PATH  = f'{PROJECT_PATH}/dataset/Video'
+CSV_PATH     = f'{PROJECT_PATH}/dataset/Labels'
 
-# Labeled video folder path
-video_with_labels_path = '/home/alberto/catkin_ws/src/mediapipe_gesture_recognition/dataset/Video_with_labels'
+# -------------------------------------- MERGE CSV -------------------------------------- #
 
-#Dataset with Labels
-data_file = "/home/alberto/catkin_ws/src/mediapipe_gesture_recognition/dataset/Labels/Total.csv"
+# Read in the CSV Files
+df1 = pd.read_csv(f'{CSV_PATH}/Test.csv', sep=';', header=None)
+df2 = pd.read_csv(f'{CSV_PATH}/Train.csv', sep=';', header=None)
+df3 = pd.read_csv(f'{CSV_PATH}/Validation.csv', sep=';', header=None)
 
-# Define the codec (non so cosa sia)
-fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+# Concatenate the DataFrames
+merged_df = pd.concat([df1, df2, df3], axis=0)
 
-# Load Dataset
-dataset = {}
+# Save the Merged Dataframe to a New CSV File
+merged_df.to_csv(f'{CSV_PATH}/Total.csv', index=False, header=None)
+merged_df.sort_values(0).to_csv(f'{CSV_PATH}/Sorted_Total.csv', index=False, header=None)
 
-#Make a dictionary with each label for every frame subfolder
-with open(data_file, 'r') as f:
-    reader = csv.reader(f)
-    for row in reader:
-        number, label = row
-        dataset[int(number)] = label
+# Print DataFrames
+print(f'\n{colored("Test CSV:", "yellow")}\n\n', df1, f'\n\n\n{colored("Train CSV:", "yellow")}\n\n', df2, f'\n\n\n{colored("Validation CSV:", "yellow")}\n\n', df3, '\n')
+print(f'\n{colored("Total CSV:", "yellow")}\n\n', merged_df, '\n\n')
 
-# Iterate for every gesture frame subfolder
-for subfolder_name in os.listdir(root_path):
-    if os.path.isdir(os.path.join(root_path, subfolder_name)):
+# -------------------------------------- CONVERT DATASET -------------------------------------- #
+
+# Define the Codec
+codec = cv2.VideoWriter_fourcc(*'mp4v')
+
+# Make a Dictionary with Each Label for Every Frame Subfolder
+with open(f'{CSV_PATH}/Total.csv', 'r') as f: dataset = {int(number):label for number, label in csv.reader(f)}
+
+# Iterate for Every Gesture Subfolder in Database
+for subfolder_name in sorted(os.listdir(DATASET_PATH)):
+
+    if os.path.isdir(os.path.join(DATASET_PATH, subfolder_name)):
        
-       # Take the subfolder number (every subfolder had a "number name")
-       subfolder_number = int(subfolder_name)
-          
-       # Take the label of every subfolder 
-       subfolder_label = dataset[subfolder_number]
+        # Take the Label of Every Subfolder, using the Subfolder Number
+        subfolder_label = dataset[int(subfolder_name)]
+
+        # Choose the Corresponding Gesture Subfolder Path to Save the Video
+        subfolder_path = os.path.join(OUTPUT_PATH, subfolder_label)
+
+        # Create the Subfolder (if not exist)
+        os.makedirs(subfolder_path, exist_ok=True)
+
+        # Define Input - Output Paths
+        input_path  = os.path.join(DATASET_PATH, subfolder_name)
+        output_path = os.path.join(subfolder_path, subfolder_name + ".mp4")
+       
+        # Debug Print
+        print(f'Subfolder: {int(subfolder_name):6}   |   Label: {subfolder_label}')
+        # print(f'Input Path: {input_path} | Output Path: {output_path}')
+
+        # Create VideoWriter Object
+        out = cv2.VideoWriter(output_path, codec, len(os.listdir(input_path))/3, (176*2,100*2))
    
-       # Choose the right subfolder path to save the videos
-       subfolder_path = os.path.join(video_with_labels_path, subfolder_label)
+        # Iterate Through the Images in the Subfolder
+        for filename in sorted(os.listdir(input_path)):
 
-       # Create the subfolder if it doesn't exist
-       os.makedirs(subfolder_path, exist_ok=True)
+            # Choose Only the `.jpg File to Merge
+            if filename.endswith('.jpg'):
 
-       # Define the input and output paths
-       input_path = os.path.join(root_path, subfolder_name)
+                # Read, Resize and Write the Image to the VideoWriter
+                img = cv2.imread(os.path.join(input_path, filename))
+                img = cv2.resize(img, (176*2, 100*2))
+                out.write(img)
 
-       output_path = os.path.join(subfolder_path, subfolder_name + ".avi")
-       
-       #Debug print
-       print("\nI'm taking the frames from the subfolder:", subfolder_number, "in this path", input_path, "\n")
-       print("I'm make the video in the subfolder", subfolder_label, "in this path", output_path, "\n")
-       
+        # Release the VideoWriter
+        out.release()
 
-       # Create VideoWriter object
-       out = cv2.VideoWriter(output_path, fourcc, len(os.listdir(input_path))/3, (176*2,100*2))
-   
-       # Iterate through the images in the subfolder
-       for filename in sorted(os.listdir(input_path)):
-
-           #Choose only the .jpg file to merge 
-           if filename.endswith('.jpg'):
-
-               # Read the image
-               img = cv2.imread(os.path.join(input_path, filename))
-               # Resize the image
-               img = cv2.resize(img, (176*2, 100*2))
-               # Write the image to the VideoWriter
-               out.write(img)
-
-
-
-       # Release the VideoWriter
-       out.release()
-#print the end 
-print("All done\n")
+print("\nAll Video Processed")
