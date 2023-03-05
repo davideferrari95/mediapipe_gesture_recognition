@@ -13,9 +13,7 @@ from mediapipe_gesture_recognition.msg import Pose, Face, Keypoint, Hand, Frame
 
 '''
 To Obtain The Available Cameras: 
-
   v4l2-ctl --list-devices
-
 Intel(R) RealSense(TM) Depth Ca (usb-0000:00:14.0-2):
 	/dev/video2
 	/dev/video3
@@ -23,7 +21,6 @@ Intel(R) RealSense(TM) Depth Ca (usb-0000:00:14.0-2):
 	/dev/video5
 	/dev/video6 -> RGB
 	/dev/video7
-
 VGA WebCam: VGA WebCam (usb-0000:00:14.0-5):
 	/dev/video0 -> RGB
 	/dev/video1
@@ -478,7 +475,7 @@ class MediapipeStreaming:
 
                 #Load the last gesture name
                 current_gesture_progress_number = int(lines[0].split(",")[0])
-                
+
         except FileNotFoundError:
             current_gesture_progress_number = 0 
 
@@ -520,7 +517,7 @@ class MediapipeStreaming:
 
                 # Take the video number
                 self.video_number = os.path.splitext(filename)[0]
-                
+
                 with open(self.progress_file, "w") as f:
                     f.write(str(current_gesture_progress_number) + "," + str(self.video_number))
 
@@ -571,12 +568,12 @@ class MediapipeStreaming:
                     self.recordVideos(self.gesture_name,self.video_number, sequence)
                     # Save your progress in a txt
 
-                
+
 
             current_gesture_progress_number += 1 
             current_gesture_number += 1    
 
-        
+
         # The last frame fill for the last folder out of the two big loops
         self.npyfileFiller(self.gesture_name, self.video_number)
 
