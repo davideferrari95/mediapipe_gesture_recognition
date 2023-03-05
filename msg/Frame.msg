@@ -1,4 +1,0 @@
-mediapipe_gesture_recognition/Hand left_hand
-mediapipe_gesture_recognition/Hand right_hand
-mediapipe_gesture_recognition/Face face
-mediapipe_gesture_recognition/Pose pose

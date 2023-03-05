@@ -26,13 +26,13 @@ add_message_files(
   Keypoint.msg
   Hand.msg
   Face.msg
-  Frame.msg
 )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
 #   FILES
-#   VideoSequence.srv
+#   Service1.srv
+#   Service2.srv
 # )
 
 ## Generate actions in the 'action' folder
@@ -100,20 +100,19 @@ include_directories(
 
 install(PROGRAMS 
 
-#Streams Node
-scripts/mediapipe_stream_node.py
-scripts/mediapipe_video_node.py
+  # Streams Node
+  scripts/mediapipe_stream_node.py
+  scripts/mediapipe_video_node.py
 
-#Training node
-scripts/pytorch_training_node.py
-scripts/pytorch_videotraining_node.py
-scripts/tensorflow_training_node.py
-scripts/tensorflow_videotraining_node.py
+  # Training Node
+  scripts/pytorch_training_node.py
+  scripts/pytorch_videotraining_node.py
+  scripts/tensorflow_training_node.py
+  scripts/tensorflow_videotraining_node.py
 
-#Recognition node
-scripts/pytorch_recognition_node.py
-scripts/tensorflow_recognition_node.py
-
+  # Recognition Node
+  scripts/pytorch_recognition_node.py
+  scripts/tensorflow_recognition_node.py
 
   DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}
 )

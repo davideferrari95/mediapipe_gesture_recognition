@@ -1,5 +1,0 @@
-string video_name
-string video_number 
-mediapipe_gesture_recognition/Frame[] Keysequence
----
-bool response
