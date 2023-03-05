@@ -4,9 +4,9 @@ from termcolor import colored
 
 # Working Path (__file__: script/utils/dataset_converter.py)
 PROJECT_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DATASET_PATH = f'{PROJECT_PATH}/dataset/20bn-jester-v1'
-OUTPUT_PATH  = f'{PROJECT_PATH}/dataset/Video'
-CSV_PATH     = f'{PROJECT_PATH}/dataset/Labels'
+DATASET_PATH = f'{PROJECT_PATH}/dataset/Jester Dataset/20bn-jester-v1'
+OUTPUT_PATH  = f'{PROJECT_PATH}/dataset/Jester Dataset/Video'
+CSV_PATH     = f'{PROJECT_PATH}/dataset/Jester Dataset/Labels'
 
 # -------------------------------------- MERGE CSV -------------------------------------- #
 
