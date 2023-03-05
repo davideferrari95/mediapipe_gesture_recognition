@@ -13,6 +13,6 @@
     <param name="enable_face"       value="$(arg enable_face)"/>
 
     <!-- Mediapipe Stream Node  -->
-    <node pkg="mediapipe_gesture_recognition" type="mediapipe_video_node.py" name="mediapipe_video_node" output="screen"/>
+    <node pkg="mediapipe_gesture_recognition" type="process_dataset_node.py" name="process_dataset_node" output="screen"/>
 
 </launch>

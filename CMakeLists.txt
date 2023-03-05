@@ -102,7 +102,9 @@ install(PROGRAMS
 
   # Streams Node
   scripts/mediapipe_stream_node.py
-  scripts/mediapipe_video_node.py
+
+  # Process Dataset Node
+  scripts/utils/process_dataset_node.py
 
   # Training Node
   scripts/pytorch_training_node.py
