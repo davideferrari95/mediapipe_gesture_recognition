@@ -45,11 +45,11 @@ class MediapipeDatasetProcess:
     self.enable_face       = rospy.get_param('enable_face', False)
 
     # Select Gesture File
-    self.gesture_file = ''
-    if self.enable_right_hand: self.gesture_file += 'Right'
-    if self.enable_left_hand:  self.gesture_file += 'Left'
-    if self.enable_pose:       self.gesture_file += 'Pose'
-    if self.enable_face:       self.gesture_file += 'Face'
+    self.gesture_enabled_folder = ''
+    if self.enable_right_hand: self.gesture_enabled_folder += 'Right'
+    if self.enable_left_hand:  self.gesture_enabled_folder += 'Left'
+    if self.enable_pose:       self.gesture_enabled_folder += 'Pose'
+    if self.enable_face:       self.gesture_enabled_folder += 'Face'
 
     # Debug Print
     print(colored(f'\nFunctions Enabled:\n', 'yellow'))
@@ -238,18 +238,18 @@ class MediapipeDatasetProcess:
     '''
 
     # Create a Gesture Folder 
-    os.makedirs(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture), exist_ok=True)
+    os.makedirs(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_enabled_folder}/', gesture), exist_ok=True)
 
     # Create a Number Folder for Each Video of the Current Gesture 
-    os.makedirs(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(video_number)), exist_ok=True)
+    os.makedirs(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_enabled_folder}/', gesture, str(video_number)), exist_ok=True)
 
     # Export Keypoints Values in the Correct Folder
-    npy_path = os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(video_number), str(self.framenumber))
+    npy_path = os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_enabled_folder}/', gesture, str(video_number), str(self.framenumber))
 
     # Check if This Frame Number Exists and Iterate the Frame Numbers Until the Right FrameNumber
     while os.path.exists(npy_path + '.npy'): 
       self.framenumber = int(self.framenumber) + 1
-      npy_path = os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(video_number), str(self.framenumber))
+      npy_path = os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_enabled_folder}/', gesture, str(video_number), str(self.framenumber))
 
     # Save the Keypoints in the Correct Folder
     np.save(npy_path, keypoints_sequence)
@@ -263,7 +263,7 @@ class MediapipeDatasetProcess:
     if not video_number == '':
 
       # Get the Number of `.npy` Files in the Current Gesture Folder
-      npy_path = os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(video_number)) 
+      npy_path = os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_enabled_folder}/', gesture, str(video_number)) 
       npyfilenumber = os.listdir(npy_path)
       npyfilenumber = len(npyfilenumber)
 
@@ -271,11 +271,11 @@ class MediapipeDatasetProcess:
       if npyfilenumber < 40:
 
         # Load the Last `.npy` File
-        data = np.load(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(video_number), str(npyfilenumber -1)+".npy"))
+        data = np.load(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_enabled_folder}/', gesture, str(video_number), str(npyfilenumber -1)+".npy"))
 
         # Copy the Last `.npy` File to Obtain 40 `.npy` Files to Train the NN
         for i in range (40 - npyfilenumber):
-          np.save(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(video_number), str(npyfilenumber + i)), data)
+          np.save(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_enabled_folder}/', gesture, str(video_number), str(npyfilenumber + i)), data)
 
   def processDataset(self):
 
