@@ -248,100 +248,99 @@ class MediapipeDatasetProcess:
 
     # Check if This Frame Number Exists and Iterate the Frame Numbers Until the Right FrameNumber
     while os.path.exists(npy_path + '.npy'): 
-        self.framenumber = int(self.framenumber) + 1
-        npy_path = os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(video_number), str(self.framenumber))
+      self.framenumber = int(self.framenumber) + 1
+      npy_path = os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(video_number), str(self.framenumber))
 
-    #Save the keypoints in the correct folder
+    # Save the Keypoints in the Correct Folder
     np.save(npy_path, keypoints_sequence)
-    
-    #Print the current gesture and the video number
+
+    # Print the Current Gesture and the Video Number
     print(f'\nCollecting Frames for {gesture} | Video Number: {video_number}  | Frame number:{self.framenumber}')
 
   def npyfileFiller(self, gesture, video_number):
-   
-   #Check if the video number is not empty
-   if not video_number == '':
 
-    #Get the number of npy files in the current gesture folder
-    npy_path = os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(video_number)) 
-    npyfilenumber = os.listdir(npy_path)
-    npyfilenumber = len(npyfilenumber)
+    # Check if the Video Number is Not Empty
+    if not video_number == '':
 
-    #Check if the npy file number is less than 40
-    if npyfilenumber < 40:
+      # Get the Number of `.npy` Files in the Current Gesture Folder
+      npy_path = os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(video_number)) 
+      npyfilenumber = os.listdir(npy_path)
+      npyfilenumber = len(npyfilenumber)
 
-     #Load the last npy file 
-     data = np.load(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(video_number), str(npyfilenumber -1)+".npy"))
+      # Check if the `.npy` File Number is < 40
+      if npyfilenumber < 40:
 
-     #Copy the last npy file to obtain 40 npy files to train the NN
-     for i in range (40 - npyfilenumber):
-       np.save(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(video_number), str(npyfilenumber + i)), data)
-  
+        # Load the Last `.npy` File
+        data = np.load(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(video_number), str(npyfilenumber -1)+".npy"))
+
+        # Copy the Last `.npy` File to Obtain 40 `.npy` Files to Train the NN
+        for i in range (40 - npyfilenumber):
+          np.save(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(video_number), str(npyfilenumber + i)), data)
+
   def processDataset(self):
 
     print('Starting Collection')
 
-    #Read every file in the directory
-    for root, dirs, files in sorted(os.walk(self.path)):
-        
-      #Get the current subfolder
+    # Read Every File in the Directory
+    for root, dirs, files in sorted(os.walk(self.DATASET_PATH)):
+
+      # Get the Current Subfolder
       current_subdir = os.path.basename(root)
-    
-      #Read every video in every subfolder 
+
+      # Read Every Video in Every Subfolder
       for filename in files:
-        
-        #Fill the frames gap
+
+        # Fill the Frames Gap
         self.npyfileFiller(self.gesture_name, self.video_number) 
 
-        #Take the gesture name from the current folder
+        # Take the Gesture Name from the Current Folder
         self.gesture_name = os.path.splitext(current_subdir)[0]
 
-        #Take the video number 
+        # Take the Video Number
         self.video_number = os.path.splitext(filename)[0]
 
-        #Print the current observed video
+        # Print the Current Observed Video
         #print("\nCurrent gesture:", gesture_name,"Current video:", video_number)
 
-        # Check if the file is a video
+        # Check if the File is a Video
         if not filename.endswith(('.mp4', '.avi', '.mov')):
-            continue
-                        
-        # Get the full path of the video for each gesture
+          continue
+
+        # Get the Full Path of the Video for Each Gesture
         video_path = os.path.join(root, filename)
-        
-        # Open the video
+
+        # Open the Video
         video_cap = cv2.VideoCapture(video_path)
-        
+
         while video_cap.isOpened() and not rospy.is_shutdown():
-    
+
           # Read Webcam Im
           success, image = video_cap.read()
-          
+
           if not success:
-           print('Ignoring empty camera frame.')
-           break
-           # If loading a video, use 'break' instead of 'continue'.
-           #continue 
+
+            print('Ignoring Empty Camera Frame.')
+            break
 
           # To Improve Performance -> Process the Image as Not-Writeable
           image.flags.writeable = False
           image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-          
+
           # Get Holistic Results from Mediapipe Holistic
           self.holistic_results = self.holistic.process(image)
-          
+
           # To Draw the Annotations -> Set the Image Writable
           image.flags.writeable = True
           image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-          
+
           # Process Mediapipe Results
           sequence = self.processResults(image)
-          
+
           # Flip the image horizontally for a selfie-view display.
           cv2.imshow('MediaPipe Landmarks', cv2.flip(image, 1))
           if cv2.waitKey(5) & 0xFF == 27:
             break
-          
+
           # Save Frame Data
           self.saveFrame(self.gesture_name,self.video_number,sequence)
 
@@ -355,8 +354,8 @@ class MediapipeDatasetProcess:
 
 if __name__ == '__main__':
 
-    # Create Mediapipe Dataset Process Class
-    MediapipeProcess = MediapipeDatasetProcess()
+  # Create Mediapipe Dataset Process Class
+  MediapipeProcess = MediapipeDatasetProcess()
 
-    # Mediapipe Dataset Process Function
-    MediapipeProcess.processDataset()
+  # Mediapipe Dataset Process Function
+  MediapipeProcess.processDataset()
