@@ -32,11 +32,10 @@ class MediapipeDatasetProcess:
 
     # ROS Initialization
     rospy.init_node('mediapipe_dataset_processor_node', anonymous=True)
-    self.ros_rate = rospy.Rate(30)
 
     # Get Package Path - Get Dataset Folder
-    package_path = rospkg.RosPack().get_path('mediapipe_gesture_recognition')
-    self.DATASET_PATH = f'{package_path}/dataset/Jester Dataset/Videos'
+    self.package_path = rospkg.RosPack().get_path('mediapipe_gesture_recognition')
+    self.DATASET_PATH = os.path.join(self.package_path, r'dataset/Jester Dataset/Videos')
 
     # Read Mediapipe Modules Parameters
     self.enable_right_hand = rospy.get_param('enable_right_hand', False)
@@ -236,6 +235,8 @@ class MediapipeDatasetProcess:
     Loop to Save the Landmarks Coordinates for Each Frame of Each Video
     The Loop Continue Until the Service Response Keep Itself True with a 30FPS
     '''
+    
+    # TODO: save all frames of a video in a single file (keypoint_sequence is a vector of vector)
 
     # Create a Gesture Folder 
     os.makedirs(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_enabled_folder}/', gesture), exist_ok=True)
@@ -255,7 +256,7 @@ class MediapipeDatasetProcess:
     np.save(npy_path, keypoints_sequence)
 
     # Print the Current Gesture and the Video Number
-    print(f'\nCollecting Frames for {gesture} | Video Number: {video_number}  | Frame number:{self.framenumber}')
+    print(f'Collecting Frames for {gesture} | Video Number: {video_number}  | Frame number:{self.framenumber}')
 
   def npyfileFiller(self, gesture, video_number):
 
@@ -280,6 +281,84 @@ class MediapipeDatasetProcess:
   def processDataset(self):
 
     print('Starting Collection')
+    
+    # for folder in os.listdir(self.DATASET_PATH):
+    #   print(folder)
+    #   for video in os.listdir(os.path.join(self.DATASET_PATH, folder)):
+    #         print(video)
+    
+    ''' 
+    
+    Per salvare il punto di avanzamento durante l'elaborazione del dataset e ripartire da quel punto in caso di interruzione del codice, è possibile utilizzare una combinazione di salvataggio su file e gestione delle eccezioni.
+
+    Ecco un possibile approccio:
+
+        Inizializza una variabile globale, ad esempio last_processed_video, per memorizzare l'ultimo video elaborato.
+        Crea una funzione per elaborare un singolo video. All'interno della funzione, inserisci il codice che elabora il video e alla fine aggiorna la variabile last_processed_video con il nome del video elaborato.
+        Inserisci un blocco try-except per gestire le eccezioni. All'interno del blocco try, esegui un ciclo che attraversa tutti i video da elaborare. Per ogni video, verifica se il suo nome è maggiore del nome dell'ultimo video elaborato (puoi usare la funzione sorted per ordinare i nomi dei file in ordine alfabetico). Se il video non è stato ancora elaborato, esegui la funzione che elabora il video. All'interno del blocco except, salva la variabile last_processed_video su un file di testo.
+        Alla successiva esecuzione del codice, controlla se esiste un file di testo che contiene l'ultimo video elaborato e carica la variabile last_processed_video dal file. In questo modo, sarai in grado di riprendere l'elaborazione dal punto in cui l'hai interrotta.
+
+    Ecco un esempio di codice Python che implementa questo approccio:
+
+    import os
+
+    # Inizializza la variabile last_processed_video
+    last_processed_video = ""
+
+    # Definisci la funzione per elaborare un singolo video
+    def process_video(video_path):
+        # Inserisci qui il codice per elaborare il video
+        # ...
+        # Aggiorna la variabile last_processed_video con il nome del video elaborato
+        global last_processed_video
+        last_processed_video = os.path.basename(video_path)
+
+    # Esegui l'elaborazione dei video
+    try:
+        # Carica la lista dei video da elaborare
+        video_list = sorted(os.listdir("path/to/videos"))
+
+        # Cerca l'ultimo video elaborato
+        if os.path.exists("last_processed_video.txt"):
+            with open("last_processed_video.txt", "r") as f:
+                last_processed_video = f.read().strip()
+
+        # Elabora i video
+        for video_name in video_list:
+            video_path = os.path.join("path/to/videos", video_name)
+            if video_name > last_processed_video:
+                process_video(video_path)
+
+    except KeyboardInterrupt:
+        # In caso di interruzione con CTRL+C, salva l'ultimo video elaborato
+        with open("last_processed_video.txt", "w") as f:
+            f.write(last_processed_video)
+
+    Nel codice sopra, la funzione os.path.basename viene utilizzata per ottenere il nome del file dal percorso completo del video. La funzione os.path.exists viene utilizzata per controllare se il file "last_processed_video.txt" esiste già. La funzione strip viene utilizzata per rimuovere eventuali spazi bianchi dal contenuto del file. Infine, la variabile KeyboardInterrupt viene utilizzata per gestire l'interruzione del cod
+
+    '''
+    
+    ''' 
+    possiamo fare un txt che, dopo aver salvato un video, viene aggiornato con nome_gesto + numero_video
+    con dei for annidati processiamo tutte le cartelle e tutti i video al loro interno (in ordine alfabetico!)
+    controlliamo prima la cartella del gesto, se siamo al gesto "No gesture" saltiamo "Doing other things" e "Drumming Fingers" in quando precedenti in ordine alfabetico
+    dentro la cartella se abbiamo salvato il video 100, partiamo dal 101, ignorando tutti quelli prima
+    '''
+    
+    ''' 
+    DA CAMBIARE:
+    
+      1. Salvare ogni video con un singolo file (.pkl, .npy, altri) organizzati in modo decente; non possiamo avere 148000 * 40+ file .npy, già col dataset la cartella è pesantissima, figuriamoci con tutti quei files extra...
+         Anzi, forse salverei un file per ogni gesto addirittura, utilizzando pickle o simili e salvando una custom dataclass fatta da un array contenente n_video array di frame
+         Anche perchè in futuro se vorremo fare un training con solo la face o con tutto ecc non possiamo avere 148000 * 40+ * 3/4/5 volte...
+      
+      2. La funzione npyfiller secondo me messa qua è sbagliato. Riflettendoci questo è un nodo che processa i video, aggiungere dei dati exta è come se andassimo a "modificare" i video
+         La cosa più corretta secondo me è salvare qua i video come sono, poi nella NN usare una tecnica di filling come la "zero-padding" descritta sotto.
+         
+      3. Inserire assolutamente una funzione che gestica l'interruzione con CRTL+C, deve funzionare. Col txt come descritto sopra forse potrebbe funzionare.
+      
+    agiustate queste cose direi che possiamo far partire il processo dei video 
+    '''
 
     # Read Every File in the Directory
     for root, dirs, files in sorted(os.walk(self.DATASET_PATH)):
@@ -290,8 +369,8 @@ class MediapipeDatasetProcess:
       # Read Every Video in Every Subfolder
       for filename in files:
 
-        # Fill the Frames Gap
-        self.npyfileFiller(self.gesture_name, self.video_number) 
+        # FIX: Fill the Frames Gap -> Perchè è qui ? Gesture Name è letto dopo
+        self.npyfileFiller(self.gesture_name, self.video_number)
 
         # Take the Gesture Name from the Current Folder
         self.gesture_name = os.path.splitext(current_subdir)[0]
@@ -319,7 +398,7 @@ class MediapipeDatasetProcess:
 
           if not success:
 
-            print('Ignoring Empty Camera Frame.')
+            print('Video Finished\n')
             break
 
           # To Improve Performance -> Process the Image as Not-Writeable
@@ -336,18 +415,43 @@ class MediapipeDatasetProcess:
           # Process Mediapipe Results
           sequence = self.processResults(image)
 
-          # Flip the image horizontally for a selfie-view display.
+          # Show and Flip the Image Horizontally for a Selfie-View Display.
           cv2.imshow('MediaPipe Landmarks', cv2.flip(image, 1))
           if cv2.waitKey(5) & 0xFF == 27:
             break
 
+          # TODO: move save data out of the while, appending frame in a vector
           # Save Frame Data
-          self.saveFrame(self.gesture_name,self.video_number,sequence)
+          self.saveFrame(self.gesture_name, self.video_number, sequence)
 
         # Close Video Cap
         video_cap.release()
 
+    # Remove this function, the differences have to be fixed in the training node 
     self.npyfileFiller(self.gesture_name, self.video_number)
+    
+    ''' 
+    Sì, posso aiutarti a creare una rete neurale per il riconoscimento dei gesti in 3D. Esistono diverse architetture di reti neurali che possono essere utilizzate per questa attività, ma una delle più comuni è la CNN (Convolutional Neural Network). Di seguito è riportato un esempio di architettura di rete neurale CNN per il riconoscimento dei gesti in 3D:
+
+    Input Layer: L'input layer della rete neurale accetta i dati di input che rappresentano il gesto in 3D. Ad esempio, i dati di input potrebbero essere una serie di frame 3D che rappresentano un movimento della mano o del corpo.
+    Convolutional Layer: Il primo livello della rete neurale è il livello convoluzionale, che estrae le feature dei dati di input. In particolare, il livello convoluzionale applica una serie di filtri convoluzionali sui dati di input per creare una mappa delle feature. Ad esempio, i filtri convoluzionali possono essere utilizzati per rilevare i bordi o le forme dei gesti.
+    Pooling Layer: Il livello di pooling riduce la dimensione della mappa delle feature creata dal livello convoluzionale. Ciò è utile perché riduce il numero di parametri della rete neurale e, quindi, rende la rete neurale più veloce e meno suscettibile all'overfitting.
+    Convolutional Layer: Un altro livello convoluzionale può essere utilizzato per estrarre ulteriori feature dal pool delle feature creato dal primo livello convoluzionale.
+    Pooling Layer: Un altro livello di pooling può essere utilizzato per ridurre ulteriormente la dimensione della mappa delle feature.
+    Fully Connected Layer: Il layer fully connected accetta l'output dell'ultimo livello di pooling e lo trasforma in un vettore di feature unidimensionale. Questo vettore di feature viene quindi passato attraverso una serie di layer fully connected che applicano una funzione di attivazione, come ad esempio la funzione ReLU.
+    Output Layer: Il layer di output contiene un numero di neuroni corrispondente al numero di classi di gesti da riconoscere. Ad esempio, se ci sono cinque classi di gesti (ad esempio, pugno, apertura della mano, palmo, dito indice e pollice), il layer di output conterrebbe cinque neuroni. La funzione di attivazione utilizzata in questo livello dipende dal tipo di problema di classificazione. Ad esempio, per un problema di classificazione binaria (due classi), si può utilizzare la funzione di attivazione sigmoid, mentre per un problema di classificazione multiclasse si può utilizzare la funzione di attivazione softmax.
+
+    Training: Dopo aver costruito l'architettura della rete neurale, è necessario allenarla utilizzando un set di dati di training. Durante l'allenamento, la rete neurale cerca di minimizzare la funzione di costo, che misura la differenza tra la predizione della rete neurale e il valore di output corretto.
+    Testing: Dopo aver allenato la rete neurale, è
+
+    ---
+    
+    e se ogni gesto ha un numero diverso di frame ?
+
+    Se ogni gesto ha un numero diverso di frame, è possibile utilizzare una tecnica chiamata "zero-padding" per gestire questa situazione. In pratica, è possibile aggiungere degli zeri al termine dei gesti più brevi, in modo da ottenere un insieme di gesti con la stessa lunghezza. In questo modo, tutti i gesti avranno la stessa dimensione e potranno essere utilizzati come input per la rete neurale.
+    Ad esempio, supponiamo che il gesto più breve abbia una lunghezza di 50 frame e il gesto più lungo abbia una lunghezza di 100 frame. In questo caso, è possibile aggiungere 50 zeri al termine dei gesti più brevi in modo da ottenere un insieme di gesti con una lunghezza di 100 frame. In questo modo, tutti i gesti avranno la stessa lunghezza e potranno essere utilizzati come input per la rete neurale.
+    Tuttavia, è importante notare che l'aggiunta di zeri può aumentare la dimensione dei dati di input e quindi rendere la rete neurale più lenta o richiedere più memoria. Inoltre, l'aggiunta di zeri potrebbe non essere la soluzione migliore se la differenza di lunghezza tra i gesti è troppo grande. In tal caso, potrebbe essere necessario utilizzare tecniche di pre-elaborazione dei dati, come ad esempio l'interpolazione o il campionamento, per ridurre la differenza di lunghezza tra i gesti.
+    '''
 
     # Print Finish of All Videos
     print('All Video Processed')
