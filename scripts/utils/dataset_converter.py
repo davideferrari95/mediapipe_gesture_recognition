@@ -73,4 +73,5 @@ for subfolder_name in sorted(os.listdir(DATASET_PATH)):
         # Release the VideoWriter
         out.release()
 
-print("\nAll Video Processed")
+print('\nAll Video Processed\n')
+print(colored('REMEMBER: Rename the "Video" output folder in "Videos" to avoid Deletions\n','red'))
