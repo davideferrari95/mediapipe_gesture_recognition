@@ -396,9 +396,6 @@ if __name__ == '__main__':
   # Mediapipe Dataset Process Function
   MediapipeProcess.processDataset()
 
-   #Reset the progress file
-  with open(MediapipeProcess.progress_file, 'w') as f:
-    f.write(",")
 
   
 
