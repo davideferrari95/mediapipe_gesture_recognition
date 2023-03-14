@@ -67,9 +67,9 @@ class MediapipeDatasetProcess:
     print(colored(f'  Face Mesh:  {self.enable_face}\n',      'green' if self.enable_face else 'red'))
 
     # Initialize Mediapipe:
-    self.mp_drawing = mediapipe.solutions.drawing_utils
+    self.mp_drawing        = mediapipe.solutions.drawing_utils
     self.mp_drawing_styles = mediapipe.solutions.drawing_styles
-    self.mp_holistic = mediapipe.solutions.holistic
+    self.mp_holistic       = mediapipe.solutions.holistic
 
     # Initialize Mediapipe Holistic
     self.holistic = self.mp_holistic.Holistic(refine_face_landmarks=True, min_detection_confidence=0.5, min_tracking_confidence=0.5)
