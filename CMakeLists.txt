@@ -103,6 +103,10 @@ install(PROGRAMS
   # Streams Node
   scripts/mediapipe_stream_node.py
 
+  # 2D Gesture Recognition Node
+  scripts/gesture_2D/recognition_node_2D.py
+  scripts/gesture_2D/training_node_2D.py
+
   # Process Dataset Node
   scripts/utils/process_dataset_node.py
 

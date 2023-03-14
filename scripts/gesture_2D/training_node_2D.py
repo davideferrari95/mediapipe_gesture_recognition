@@ -12,7 +12,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler 
 from sklearn.linear_model import LogisticRegression, RidgeClassifier
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.metrics import accuracy_score                                      # Accuracy metrics 
+from sklearn.metrics import accuracy_score
 
 # Import Files Check Functions
 from os import listdir
@@ -22,7 +22,7 @@ from os.path import isfile, join
 from mediapipe_gesture_recognition.msg import Pose, Face, Hand
 
 # Import Utilities
-from Utils import countdown
+from scripts.utils.utils import countdown
 
 class GestureRecognitionTraining2D:
 
@@ -53,30 +53,28 @@ class GestureRecognitionTraining2D:
         # Get Package Path
         self.package_path = rospkg.RosPack().get_path('mediapipe_gesture_recognition')
 
-
     # Callback Functions
     def RightHandCallback(self, data): self.right_new_msg: Hand() = data
     def LeftHandCallback(self, data):  self.left_new_msg:  Hand() = data
     def PoseCallback(self, data):      self.pose_new_msg:  Pose() = data
     def FaceCallback(self, data):      self.face_new_msg:  Face() = data
 
-
 ############################################################
 #                Recording Phase Functions                 #
 ############################################################
 
-    # Message To Dictionary Conversion (here the missing parameters: right_hand, pose, face,)
-    def msg2dict(self, dict,  left_hand):
+    # Message To Dictionary Conversion
+    def msg2dict(self, dict, right_hand, left_hand, pose, face):
 
         # Append Keypoint Messages in a DataFrame
         def createDataFrame(msg):  return pd.DataFrame([[k.keypoint_number, k.keypoint_name, k.x, k.y, k.z, k.v] for k in msg.keypoints], 
                                                          columns=['Keypoint Number', 'Keypoint Name', 'x', 'y', 'z', 'visibility'])
 
         # Append New Data to Dict
-        dict[f'Data {len(dict) + 1}'] = {#'Right Hand' : createDataFrame(right_hand), 
+        dict[f'Data {len(dict) + 1}'] = {'Right Hand' : createDataFrame(right_hand), 
                                          'Left Hand'  : createDataFrame(left_hand), 
-                                         #'Pose'       : createDataFrame(pose), 
-                                         #'Face'       : createDataFrame(face)
+                                         'Pose'       : createDataFrame(pose), 
+                                         'Face'       : createDataFrame(face)
         }
 
         return dict
@@ -118,7 +116,6 @@ class GestureRecognitionTraining2D:
             # Access to Each Data in 'Right Hand' Dataframe
             print('\nRight Hand:\n', data_dictionary[key]['Right Hand'].loc[0])
 
-
     # Record Function
     def Record(self):
 
@@ -132,14 +129,14 @@ class GestureRecognitionTraining2D:
         countdown(5)
 
         # Starting Time
-        start = rospy.Time.now()         
+        start = rospy.Time.now()
         ACQUISITION_TIME = 10
 
         # Recognize Gesture for "ACQUISITION_TIME" Seconds
         while(not rospy.is_shutdown() and (rospy.Time.now() - start).to_sec() < ACQUISITION_TIME):
 
-            # Add Incoming Messages to Dataframe (Here the missing message: self.right_new_msg, self.pose_new_msg, self.face_new_msg )
-            data = self.msg2dict(data, self.left_new_msg)
+            # Add Incoming Messages to Dataframe
+            data = self.msg2dict(data, self.right_new_msg, self.left_new_msg, self.pose_new_msg, self.face_new_msg)
 
             # Sleep for the Remaining Cycle Time (30 FPS)
             self.rate.sleep()
@@ -156,7 +153,6 @@ class GestureRecognitionTraining2D:
 
             # Stop Recording Phase
             self.recording_phase = False
-
 
 ############################################################
 #                  Training Phase Functions                #
@@ -199,9 +195,9 @@ class GestureRecognitionTraining2D:
             # Initialize DataFrame
             df = pd.DataFrame()
 
-            """# Process The First Data
+            # Process The First Data
             for i in range (len(dictionary[1][part])):
-                df = pd.concat([df, dictionary[1][part].loc[i]], axis = 0)"""
+                df = pd.concat([df, dictionary[1][part].loc[i]], axis = 0)
 
             # Update Dictionary
             df = df.T
@@ -216,7 +212,7 @@ class GestureRecognitionTraining2D:
                 for i in range (len(dictionary[key][part])):
                     temporary_df = pd.concat([temporary_df, dictionary[key][part].loc[i]], axis = 0)
 
-                # Update Dictionary                
+                # Update Dictionary
                 temporary_df = temporary_df.T
                 df = pd.concat([df, temporary_df], axis = 0)
 
@@ -237,9 +233,9 @@ class GestureRecognitionTraining2D:
 
         # Concatenate the Name of The Gesture
         return list_position.join(concat_df, how='right')
-    
+
     def createTrainingDataframe(self):
-        
+
         # Load the Files for the Saved Positions  
         saved_positions = [f for f in listdir(f'{self.package_path}/database/2D_Gestures/{self.gesture_file}/') 
                            if isfile(join(f'{self.package_path}/database/2D_Gestures/{self.gesture_file}/', f))]
@@ -270,20 +266,20 @@ class GestureRecognitionTraining2D:
 
         # Take Only the Feature Variables [Only the Coordinates]  
         variables = df.drop(['Position'], axis = 1)
-        
+
         # Get the Label to Match [Class Name]
         label = df['Position'] 
-        
+
         # Split the Data adding Random Value in Training
         X_train, X_test, Y_train, Y_test = train_test_split(variables, label, test_size=0.3, random_state=1234)
-        
+
         return X_train, X_test, Y_train, Y_test
 
     def Train(self):
-        
+
         # Create the DataFrame for Training
         X_train, X_test, Y_train, Y_test = self.createTrainingDataframe()
-    
+
         # Different Pipelines (4 Different Machine Learning Models)
         pipelines = {
             'lr':make_pipeline(StandardScaler(), LogisticRegression()),
@@ -291,9 +287,9 @@ class GestureRecognitionTraining2D:
             'rf':make_pipeline(StandardScaler(), RandomForestClassifier()),
             'gb':make_pipeline(StandardScaler(), GradientBoostingClassifier()),
         }
-        
+
         # Run the Automatic Learning
-        fit_models = {}                         
+        fit_models = {}
         for algo, pipeline in pipelines.items():
             model = pipeline.fit(X_train, Y_train)
             fit_models[algo] = model 
@@ -315,17 +311,17 @@ class GestureRecognitionTraining2D:
 ############################################################
 
 if __name__ == '__main__':
-    
+
     # Instantiate Gesture Recognition Training Class
     GRT = GestureRecognitionTraining2D()
-    
+
     while not rospy.is_shutdown():
-        
+
         # Recording Phase
         if  (GRT.recording_phase): GRT.Record()
 
         # Training Phase
         if (GRT.training_phase): GRT.Train()
-        
+
         # Shutdown ROS
         else: rospy.shutdown()
