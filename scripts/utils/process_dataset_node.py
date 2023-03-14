@@ -33,10 +33,6 @@ class MediapipeDatasetProcess:
     # ROS Initialization
     rospy.init_node('mediapipe_dataset_processor_node', anonymous=True, disable_signals= True)
 
-    # Get Package Path - Get Dataset Folder
-    self.package_path = rospkg.RosPack().get_path('mediapipe_gesture_recognition')
-    self.DATASET_PATH = os.path.join(self.package_path, 'dataset/Video')
-    
     # Read Mediapipe Modules Parameters
     self.enable_right_hand = rospy.get_param('enable_right_hand', False)
     self.enable_left_hand  = rospy.get_param('enable_left_hand', False)
@@ -49,6 +45,19 @@ class MediapipeDatasetProcess:
     if self.enable_left_hand:  self.gesture_enabled_folder += 'Left'
     if self.enable_pose:       self.gesture_enabled_folder += 'Pose'
     if self.enable_face:       self.gesture_enabled_folder += 'Face'
+
+    # Get Package Path - Get Dataset Folder
+    self.package_path    = rospkg.RosPack().get_path('mediapipe_gesture_recognition')
+    self.DATASET_PATH    = os.path.join(self.package_path, r'dataset/Jester Dataset/Videos')
+    self.gesture_path    = os.path.join(self.package_path, 'data/3D_Gestures', self.gesture_enabled_folder)
+    self.checkpoint_file = os.path.join(self.gesture_path, 'Video Checkpoint.txt')
+
+    # Create the Processed Gesture Data Folder
+    os.makedirs(self.gesture_path, exist_ok=True)
+
+    # Create Progress File if Not Exist
+    if not os.path.exists(self.checkpoint_file):
+          with open(self.checkpoint_file, "w") as f: f.write(',')
 
     # Debug Print
     print(colored(f'\nFunctions Enabled:\n', 'yellow'))
@@ -64,19 +73,6 @@ class MediapipeDatasetProcess:
 
     # Initialize Mediapipe Holistic
     self.holistic = self.mp_holistic.Holistic(refine_face_landmarks=True, min_detection_confidence=0.5, min_tracking_confidence=0.5)
-    
-    # TODO: Initialise the Walk
-    self.gesture_name = ''
-    self.video_number = ''
-
-    #Initialize the load variable 
-    self.last_gesture = ''
-    self.last_video = ''
-    self.progress_file = "/home/alberto/catkin_ws/src/mediapipe_gesture_recognition/useful_scripts/progress.txt"
-
-    
-    #All keypoint in all the frame in all the videos for each gesture   
-    self.framekeypoints = []       #It will be [[n_videos],[n_frames],[n_keypoints]]
 
   def newKeypoint(self, landmark, number, name):
 
@@ -234,117 +230,108 @@ class MediapipeDatasetProcess:
     # Return the Flattened Keypoints Sequence
     return sequence
 
-  def savevideoFrame(self, gesture, keypoints_sequence):
+  def saveProcessedVideo(self, gesture, keypoints_sequence):
 
-    ''' Data Save Functions '''
+    ''' Data Save Functions in a Common Gesture .pkl File'''
 
+    # Gesture SaveFile
+    gesture_savefile = os.path.join(f'{self.package_path}/data/3D_Gestures/{self.gesture_enabled_folder}', f'{gesture}.pkl')
 
-    '''
-    Loop to Save the Landmarks Coordinates for Each Frame of Each Video
-    The Loop Continue Until the Service Response Keep Itself True with a 30FPS
-    '''
-    
-
-
-    # Create a Gesture Folder 
-    os.makedirs(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_enabled_folder}/', gesture), exist_ok=True)
-    
-    gesture_file = os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_enabled_folder}/', gesture, str('load_file.pkl'))
-
-
-    if os.path.exists(gesture_file):
+    # Check if SaveFile Exist
+    if os.path.exists(gesture_savefile):
 
       # Load the File
-      load_file = pickle.load(open(gesture_file, 'rb'))
+      load_file = pickle.load(open(gesture_savefile, 'rb'))
 
       # Append the New Keypoints Sequence
       load_file.append(keypoints_sequence)
 
       # Save the Updated File
-      pickle.dump(load_file, open(gesture_file, 'wb'))
-    else:
-      
-      # Save the New Keypoints Sequence
-      pickle.dump([keypoints_sequence], open(gesture_file, 'wb'))
-    
+      pickle.dump(load_file, open(gesture_savefile, 'wb'))
 
+    else:
+
+      # Save the New Keypoints Sequence
+      pickle.dump([keypoints_sequence], open(gesture_savefile, 'wb'))
 
   def processDataset(self):
 
-    with open(self.progress_file, "r") as f:
-               
-     lines = f.readlines()
-     #Load the last gesture name
-     last_gesture = str(lines[0].split(",")[0])
-     last_video = str(lines[0].split(",")[1]) + ".avi"
+    ''' Read Videos from the Dataset Folder and Process Them with Mediapipe '''
 
-    print('Starting Collection', "Gesture: ", last_gesture, "| Video:  ", last_video)
-      
+    with open(self.checkpoint_file, "r") as f:
+
+      lines = f.readlines()
+
+      # Load the Last Gesture Name
+      last_gesture = str(lines[0].split(",")[0])
+      last_video = str(lines[0].split(",")[1]) + ".mp4"
+
+    if last_gesture == '': print(colored('\nStarting Dataset Processing\n\n', 'green'))
+    else: print(colored('\nResuming Dataset Processing', 'green'), f'from Gesture: {last_gesture:10} | Video: {last_video}\n\n')
+
     try:
-        #Read every gesture folder 
+
+      # Loop Over Every Gesture Folder
       for folder in sorted(os.listdir(self.DATASET_PATH)):
 
-          #First check 
-           if folder >= last_gesture:
+        # Ignore Already Processed Gestures
+        if folder >= last_gesture:
 
-            #Save the folder path
-            folder_path = os.path.join(self.DATASET_PATH, folder)
+          # Read Every Video in the Gesture Folder
+          for video in sorted(os.listdir(os.path.join(self.DATASET_PATH, folder))):
 
-            #Read every video in the gesture folder 
-            for video in sorted(os.listdir(folder_path)):
+            # Ignore Already Processed Videos
+            if video > last_video:
 
-                #Second check
-                if video > last_video:
+              # Get the Full Path of the Video for Each Gesture
+              video_path = os.path.join(self.DATASET_PATH, folder, video)
 
-                  last_video = ""
+              # Get the Gesture Name and the Video Number
+              self.gesture_name = os.path.splitext(folder)[0]
+              self.video_number = os.path.splitext(video)[0]
 
-                  # Get the Full Path of the Video for Each Gesture
-                  video_path = os.path.join(folder_path, video)
+              # Ignore Non-Video Files
+              if not video.endswith(('.mp4', '.avi', '.mov')):
+                continue
 
-                  # Get the Gesture Name and the Video Number
-                  self.gesture_name = os.path.splitext(folder)[0]
-                  self.video_number = os.path.splitext(video)[0]
+              # Process the Video
+              video_sequence = np.array(self.processVideo(video_path))
 
-                  #print("Folder: ", self.gesture_name, "| Video: ", self.video_number)
-                  if not video.endswith(('.mp4', '.avi', '.mov')):
-                    continue
-                  
-                  # Process the Video
-                  video_sequence = self.process_video(video_path)
+              # Zero-Padding
+              pad_amt = [(0, 40 - video_sequence.shape[0]), (0, 300 - video_sequence.shape[1])]
+              padded_sequence = np.pad(video_sequence, pad_amt, 'constant', constant_values=0)
 
-                  video_sequence = np.array(video_sequence)
+              # print("Folder: ", self.gesture_name, "| Video: ", self.video_number)
+              # print(f'Sequences Shape: {np.array(padded_sequence).shape}')
 
-                  #Zero-padding 
-                  pad_amt = [(0, 40 - video_sequence.shape[0]), (0, 300 - video_sequence.shape[1])]
-                  
-                  padded_sequence = np.pad(video_sequence, pad_amt, 'constant', constant_values=0)
+              # Save the Processed Video
+              self.saveProcessedVideo(self.gesture_name, padded_sequence)
 
-                  print(f'Sequences Shape: {np.array(padded_sequence).shape}')
+              # Print Finish of the Video
+              print(f'Video {video:10} of {folder} Processed')
 
-                  # Save the Frame
-                  self.savevideoFrame(self.gesture_name, padded_sequence)
+            # Traceback - Update Checkpoint
+            with open(self.checkpoint_file, 'w') as f:
+              f.write(str(folder)+ "," + str(os.path.splitext(video)[0]))
 
-                  # Print Finish of the Video
-                  print(f'Video {video} of {folder} Processed')
-                
-                #Traceback
-                with open(self.progress_file, 'w') as f:
-                  f.write(str(folder)+ "," + str(os.path.splitext(video)[0]))
-      
+        # Reset Last Video (Otherwise also Next Gesture Folder starts from `last_video`)
+        last_video = ''
+
       # Print Finish of All Videos
-      print('All Video Processed')      
+      print('All Video Processed')
 
-    #If you press Ctrl+C stop the video flow
+    # Ctrl+C -> Stop the Video Flow
     except KeyboardInterrupt:
-      
-      print("\n\n Keyboard Interrupt \n\n")
-      with open(self.progress_file, 'w') as f:
+
+      print("\n\nKeyboard Interrupt\n\n")
+
+      with open(self.checkpoint_file, 'w') as f:
         f.write(str(folder)+ "," + str(os.path.splitext(video)[0]))
 
-    
-  # Definisci la funzione per elaborare un singolo video
-  def process_video(self, video_path):
-      
+  def processVideo(self, video_path):
+
+    ''' Function to Process a Video with Mediapipe '''
+
     # Open the Video
     self.cap = cv2.VideoCapture(video_path)
 
@@ -352,15 +339,13 @@ class MediapipeDatasetProcess:
 
     # Loop Through the Video Frames
     while self.cap.isOpened() and not rospy.is_shutdown():
-               
+
       # Read the Frame
       ret, image = self.cap.read()
 
       # Check if the Frame is Available
-      if not ret:
-         print('Ignoring empty camera frame')
-         break 
-                
+      if not ret: break
+
       # To Improve Performance -> Process the Image as Not-Writeable
       image.flags.writeable = False
       image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -377,7 +362,7 @@ class MediapipeDatasetProcess:
 
       video_sequence.append(sequence)
 
-      # Show and Flip the Image Horizontally for a Selfie-View Display.
+      # Show and Flip the Image Horizontally for a Selfie-View Display
       cv2.imshow('MediaPipe Landmarks', cv2.flip(image, 1))
       if cv2.waitKey(5) & 0xFF == 27:
         break
@@ -387,7 +372,6 @@ class MediapipeDatasetProcess:
 
     return video_sequence
 
-
 if __name__ == '__main__':
 
   # Create Mediapipe Dataset Process Class
@@ -395,12 +379,3 @@ if __name__ == '__main__':
   
   # Mediapipe Dataset Process Function
   MediapipeProcess.processDataset()
-
-   #Reset the progress file
-  with open(MediapipeProcess.progress_file, 'w') as f:
-    f.write(",")
-
-  
-
-
-    
