@@ -38,6 +38,7 @@ class MediapipeDatasetProcess:
     self.enable_left_hand  = rospy.get_param('enable_left_hand', False)
     self.enable_pose       = rospy.get_param('enable_pose', False)
     self.enable_face       = rospy.get_param('enable_face', False)
+    self.debug             = rospy.get_param('debug', False)
 
     # Select Gesture File
     self.gesture_enabled_folder = ''
@@ -297,18 +298,20 @@ class MediapipeDatasetProcess:
               # Process the Video
               video_sequence = np.array(self.processVideo(video_path))
 
+              if self.debug: print("Folder: ", self.gesture_name, "| Video: ", self.video_number)
+              if self.debug: print(f'Video Sequence Shape: {video_sequence.shape}')
+
               # Zero-Padding
               pad_amt = [(0, 40 - video_sequence.shape[0]), (0, 300 - video_sequence.shape[1])]
               padded_sequence = np.pad(video_sequence, pad_amt, 'constant', constant_values=0)
 
-              # print("Folder: ", self.gesture_name, "| Video: ", self.video_number)
-              # print(f'Sequences Shape: {np.array(padded_sequence).shape}')
+              if self.debug: print(f'Padded Sequences Shape: {np.array(padded_sequence).shape}')
 
               # Save the Processed Video
               self.saveProcessedVideo(self.gesture_name, padded_sequence)
 
               # Print Finish of the Video
-              print(f'Video {video:10} of {folder} Processed')
+              print(f'Video: {video:10} | "{folder}" | Processed and Saved')
 
             # Traceback - Update Checkpoint
             with open(self.checkpoint_file, 'w') as f:
