@@ -301,14 +301,8 @@ class MediapipeDatasetProcess:
               if self.debug: print("Folder: ", self.gesture_name, "| Video: ", self.video_number)
               if self.debug: print(f'Video Sequence Shape: {video_sequence.shape}')
 
-              # Zero-Padding
-              pad_amt = [(0, 40 - video_sequence.shape[0]), (0, 300 - video_sequence.shape[1])]
-              padded_sequence = np.pad(video_sequence, pad_amt, 'constant', constant_values=0)
-
-              if self.debug: print(f'Padded Sequences Shape: {np.array(padded_sequence).shape}')
-
               # Save the Processed Video
-              self.saveProcessedVideo(self.gesture_name, padded_sequence)
+              self.saveProcessedVideo(self.gesture_name, video_sequence)
 
               # Print Finish of the Video
               print(f'Video: {video:10} | "{folder}" | Processed and Saved')
