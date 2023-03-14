@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-
 #Useful libreries
 import rospy, rospkg, numpy as np, pickle, warnings, os
 from pytorch_videotraining_node import NeuralNetwork, CustomDataset, GestureRecognitionTraining3D 
-from Utils import countdown
+from scripts.utils.utils import countdown
 
 #Pytorch libreries
 import torch

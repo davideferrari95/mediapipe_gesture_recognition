@@ -4,7 +4,6 @@
     <arg name="xyz_gesture_recognition" default="True"/>
     <arg name="xy_gesture_recognition" default="False"/>
 
-    
     <!-- Recognition Precision Arg / Param -->
     <arg   name="recognition_precision_probability" default="0.8"/>
     <param name="recognition_precision_probability" value="$(arg recognition_precision_probability)"/>

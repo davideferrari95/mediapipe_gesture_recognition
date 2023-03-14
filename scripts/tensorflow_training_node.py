@@ -23,7 +23,7 @@ from sklearn import model_selection as SKLearnModelSelection
 from mediapipe_gesture_recognition.msg import Pose, Face, Hand
 
 # Import Utilities
-from Utils import countdown
+from scripts.utils.utils import countdown
 
 
 class GestureRecognitionTraining3D:
