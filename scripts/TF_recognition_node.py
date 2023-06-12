@@ -55,7 +55,7 @@ class GestureRecognition3D:
         print(gesture_file)
 
         # Load the Trained Model for the Detected Landmarks
-        with open(f'{package_path}/database/3D_Gestures/{gesture_file}/trained_model.pkl', 'rb') as f:
+        with open(f'{package_path}/model/TF_trained_model.pkl', 'rb') as f:
             self.model = pickle.load(f)
             
         # Load the Names of the Saved Actions
@@ -92,9 +92,9 @@ class GestureRecognition3D:
         
         
         # Analyze Only the Last 30 Frames
-        self.sequence = self.sequence[-27:]
+        self.sequence = self.sequence[-85:]
         
-        if len(self.sequence) == 27:
+        if len(self.sequence) == 85:
             
             # Obtain the Probability of Each Gesture
             prob = self.model.predict(np.expand_dims(self.sequence, axis=0))[0]

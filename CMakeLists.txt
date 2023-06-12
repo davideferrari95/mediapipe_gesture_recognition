@@ -11,7 +11,6 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   std_msgs
   sensor_msgs
-  cv_bridge
   image_transport
 )
 
@@ -26,13 +25,13 @@ add_message_files(
   Keypoint.msg
   Hand.msg
   Face.msg
+  Frame.msg
 )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
 #   FILES
-#   Service1.srv
-#   Service2.srv
+#   VideoSequence.srv
 # )
 
 ## Generate actions in the 'action' folder
@@ -101,24 +100,27 @@ include_directories(
 install(PROGRAMS 
 
   # Streams Node
+  scripts/D_mediapipe_stream_node.py
   scripts/mediapipe_stream_node.py
 
   # 2D Gesture Recognition Node
   scripts/gesture_2D/recognition_node_2D.py
   scripts/gesture_2D/training_node_2D.py
 
-  # Process Dataset Node
+  # 3D Gesture Recognition Node
+  scripts/PY_train_pickle_node.py
+  scripts/PY_recognition_node.py
+  scripts/TF_recognition_node.py
+
+  # Utils
+  scripts/utils/dataset_converter.py
   scripts/utils/process_dataset_node.py
+  scripts/utils/zero_padding_function.py
 
-  # Training Node
-  scripts/pytorch_training_node.py
-  scripts/pytorch_videotraining_node.py
-  scripts/tensorflow_training_node.py
-  scripts/tensorflow_videotraining_node.py
-
-  # Recognition Node
-  scripts/pytorch_recognition_node.py
-  scripts/tensorflow_recognition_node.py
+  # Raw Functions
+  scripts/point_node_area.py
+  # scripts/raw_function/point_node.py
+  # scripts/raw_function/take_orientation.py
 
   DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}
 )

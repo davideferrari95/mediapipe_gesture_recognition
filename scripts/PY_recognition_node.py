@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
+
 #Useful libreries
-import rospy, rospkg, numpy as np, pickle, warnings, os
-from pytorch_videotraining_node import NeuralNetwork, CustomDataset, GestureRecognitionTraining3D 
-from scripts.utils.utils import countdown
+import rospy, rospkg, numpy as np, pickle, warnings, os, matplotlib.pyplot as plt
+from  matplotlib.animation import FuncAnimation
+from PY_train_pickle_node import NeuralNetwork, CustomDataset, GestureRecognitionTraining3D 
+from Utils import countdown
+from std_msgs.msg import Int32MultiArray
 
 #Pytorch libreries
 import torch
@@ -13,6 +16,9 @@ warnings.filterwarnings('ignore', category=UserWarning)
 
 # Import Mediapipe Messages
 from mediapipe_gesture_recognition.msg import Pose, Face, Hand
+from termcolor import colored
+
+
 
 
 class GestureRecognition3D:
@@ -21,13 +27,17 @@ class GestureRecognition3D:
         
         # ROS Initialization
         rospy.init_node('mediapipe_gesture_recognition_training_node', anonymous=True)
-        self.rate = rospy.Rate(30)
+        self.rate = rospy.Rate(20)
         
         # Mediapipe Subscribers
         rospy.Subscriber('/mediapipe_gesture_recognition/right_hand', Hand, self.RightHandCallback)
         rospy.Subscriber('/mediapipe_gesture_recognition/left_hand',  Hand, self.LeftHandCallback)
         rospy.Subscriber('/mediapipe_gesture_recognition/pose',       Pose, self.PoseCallback)
         rospy.Subscriber('/mediapipe_gesture_recognition/face',       Face, self.FaceCallback)
+
+        #Fusion Publisher 
+        self.pub = rospy.Publisher('gesture', Int32MultiArray, queue_size=1000)
+
         
         # Read Mediapipe Modules Parameters
         self.enable_right_hand = rospy.get_param('enable_right_hand', False)
@@ -36,7 +46,7 @@ class GestureRecognition3D:
         self.enable_face = rospy.get_param('enable_face', False)
  
         # Read Gesture Recognition Precision Probability Parameter
-        self.recognition_precision_probability = rospy.get_param('recognition_precision_probability', 80)
+        self.recognition_precision_probability = rospy.get_param('recognition_precision_probability', 0.8)
 
         # Number of Consecutive Frames Needed to Make our Prediction
         self.sequence = []
@@ -54,13 +64,13 @@ class GestureRecognition3D:
         print("We are in :", gesture_file, "Configuration")
 
         # Load the Trained Model for the Detected Landmarks
-        with open(f'{package_path}/database/3D_Gestures/{gesture_file}/trained_model.pth', 'rb') as FILE:
+        with open(f'{package_path}/model/py_trained_model.pth', 'rb') as FILE:
 
             self.model = torch.load(FILE)
             self.model.eval()
             
         # Load the Names of the Saved Actions
-        self.actions = np.array([f for f in os.listdir(f'{package_path}/database/3D_Gestures/{gesture_file}/') if os.path.isdir(os.path.join(f'{package_path}/database/3D_Gestures/{gesture_file}/', f))])
+        self.actions = np.array([os.path.splitext(f)[0] for f in os.listdir(f'{package_path}/database/3D_Gestures/{gesture_file}/Padded_file')])
        
         print("We have this types of gestures: ", self.actions)
 
@@ -81,8 +91,8 @@ class GestureRecognition3D:
             message = getattr(self, message_name)
             
             # Extend Landmark Vector -> Saving New Keypoints 
-            #Landmarks.append(np.array([[value.x, value.y, value.z, value.v] for value in message.keypoints]).flatten() if message else np.zeros(33*4))
-            Landmarks.append(np.zeros(468 * 3) if message is None else np.array([[res.x, res.y, res.z, res.v] for res in message.keypoints]).flatten())
+            Landmarks.append(np.array([[value.x, value.y, value.z, value.v] for value in message.keypoints]).flatten() if message else np.zeros(33*4))
+            #Landmarks.append(np.zeros(468 * 3) if message is None else np.array([[res.x, res.y, res.z, res.v] for res in message.keypoints]).flatten())
 
         return Landmarks
 
@@ -108,18 +118,16 @@ class GestureRecognition3D:
             self.sequence.append(keypoints)
     
             # Analyze Only the Last 30 Frames
-            self.sequence = self.sequence[-30:]
+            self.sequence = self.sequence[-85:]
             
-            if len(self.sequence) == 30:
+            if len(self.sequence) == 85:
                 
                 # Obtain the Probability of Each Gesture
-                output = self.model(torch.Tensor(self.sequence).view(1, 30, -1))
+                output = self.model(torch.Tensor(self.sequence).view(1, 85, -1))
                 
                 # Get the Probability of the Most Probable Gesture
-                prob = torch.softmax(output, dim=1)[0] * 100
+                prob = torch.softmax(output, dim=1)[0] 
                 
-                #Print the probabilities
-                print(prob, ": This is the probability Tensor")
                 
                 # Get the Index of the Highest Probability
                 index = int(prob.argmax(dim = 0))
@@ -128,11 +136,57 @@ class GestureRecognition3D:
                 if (prob[index] > self.recognition_precision_probability):
                     
                     Recognised_gesture = self.actions[index]
-                    prob_recognised = float(prob[index])
+                    #prob_recognised = float(prob[index])
+                    msg = Int32MultiArray()
+
                     
-                    print("Recignised Gesture:", Recognised_gesture, "With this probability:", prob_recognised)
+                    if Recognised_gesture == "Point at": 
+
+                        print("Gesture Point at Recognised")
+                        msg.data = [1]
+                        self.pub.publish(msg)
+
+                    if Recognised_gesture == "Stop":
+
+                        print("Stop Recognised")
+                        msg.data = [2]
+                        self.pub.publish(msg)
+
+                    if Recognised_gesture == "Pause":
+
+                        print("Pause Recognised")
+                        msg.data = [5]
+                        self.pub.publish(msg)
+
+
+                #Print del riconoscimento e colorazione a seconda del Ricoscimento
+                print("\n\n\n\n\n\n\n\n\n")
+                print("{:<30} | {:<10}".format("Type of gesture", "Probability\n"))
+
+                for i in range(len(self.actions)):
+
+                    color = None
+
+                    if prob.numpy()[i] < 0.45:
+                        color = 'red'
+                    elif prob.numpy()[i] <0.8:
+                        color = 'yellow'
+                    else:
+                        color = 'green'
+                    colored_prob = colored("{:<.1f}%".format(prob.numpy()[i]*100), color)
+                    print("{:<30} | {:<}".format(self.actions[i], colored_prob))
+
+                print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+                # rospy.sleep(0.15)
+
+
+
+                
+
     
+
     
+
    
 ############################################################
 #                           Main                           #
@@ -142,7 +196,7 @@ class GestureRecognition3D:
 if __name__ == '__main__':
     
     #Time to prepare yourself
-    countdown(3)
+    countdown(2)
 
     # Instantiate Gesture Recognition Class
     GR = GestureRecognition3D()

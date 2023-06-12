@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
-import os
-import time
-import csv
-import rospy
+import os, pickle
+# import time
+# import csv
+# import rospy
 import rospkg
 import numpy as np
+import time
 
 
 # Pytorch Neural Network
@@ -16,19 +17,19 @@ import pytorch_lightning as pl
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from torch.utils.data import Dataset, DataLoader
+from torchmetrics import Accuracy
+from torchmetrics.functional import accuracy
+import torchmetrics
+
+# import torch.nn.utils.rnn as rnn_utils
+
 
 # Useful Function
 from keras.utils import np_utils
 from sklearn import model_selection as SKLearnModelSelection
 
-# Import Mediapipe Messages
-from mediapipe_gesture_recognition.msg import Pose, Face, Hand
 
-from mediapipe_gesture_recognition.srv import VideoSequence, VideoSequenceResponse
-
-# Import Utilities
-from moviepy.video.io.VideoFileClip import VideoFileClip
-
+# tensorboard --logdir lightning_logs/
 
 class GestureRecognitionTraining3D:
 
@@ -51,73 +52,86 @@ class GestureRecognitionTraining3D:
 
         # Get Package Path
         self.package_path = rospkg.RosPack().get_path('mediapipe_gesture_recognition')
+
+        # Get Model Path
+        self.model_path = os.path.join(self.package_path, 'model')
+
+        # Database bath
+        self.database_path = os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/Padded_file/')
         
         # Split Dataset
         self.train_percent = 0.9
         self.val_percent = 0.05
         self.test_percent = 0.05
+        
       
-        
-
-
 ############################################################
-#                 Train Phase Functions                #
+#                 Train Phase Functions                    #
 ############################################################
-    def processGestures(self, gestures):  #Chedi a davide se va bene 
-        
+
+    def processGestures(self, gestures): 
+
         gestures = np.array(gestures)
 
         # Map Gesture Label
-        label_map = {label:num for num, label in enumerate(gestures)}
+        label_map = {label.split(".")[0]:num for num, label in enumerate(gestures)}
         
-        
-        sequences, labels = [], []
+        video_sequence, labels = [], []
 
         # Loop Over Gestures
-        for gesture in gestures:
-            
-            # Loop Over Video Sequence
-            for sequence in os.listdir(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', str(gesture))):
+        for gesture in sorted(gestures):
 
-                frame = []
-                
-                npy_path = os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(sequence))
-                totframe = len(os.listdir(npy_path))
+            load_file_path = os.path.join(self.database_path, f'{gesture}')
 
-                # Loop Over Frames
-                for frame_num in range(0, totframe): #Take the last 30Frames 
+            # Load File
+            with open(load_file_path, 'rb') as f:
+
+                #Get gesture sequence from pkl file 
+                sequence = pickle.load(f)
+
+                #Loop over the sequence
+                for array in sequence:
+
+                    # Get Label
+                    for i in range (np.array(array, dtype= object).shape[0]):
+
+                        #Get the gesture name deleting the extenction name
+                        gesture_name = os.path.splitext(gesture)[0]
+
+                        labels.append(label_map[gesture_name])
+
+                    print(f'Upgrade Label Shape: {np.array(labels).shape}')
                     
-                    # Load Frame
-                    frame.append(np.load(os.path.join(npy_path, str(frame_num)+".npy")))
+                    #Concatenate the padded sequence with the previous one
+                    if np.ndim(np.array(video_sequence)) == 1:
 
-                #print("Gesture:", gesture, "Video:", os.path.basename(npy_path), "with frame:", np.shape(frame))
-            
-                sequences.append(frame)       
-                # Append Gesture Sequence and Label
-                labels.append(label_map[gesture])
-            
-                # Info Print
-                #print(f'Sequences Shape: {np.array(sequences).shape}')
-                #print(f'Labels Shape: {np.array(labels).shape}')
-            
-        return sequences, labels
+                        video_sequence = array
+         
+                    else:
+                        video_sequence = np.concatenate((video_sequence, array), axis = 0)
+                    
+                print("I'm processing |", gesture, "And the array now is", video_sequence.shape, "at time:", time.time())
+
+        # Info Print
+        print(f'Sequences Shape: {np.array(video_sequence).shape}')
+        print(f'Labels Shape: {np.array(labels).shape}')
+
+        return video_sequence, labels
 
     def trainPhase(self):
         
         # Load Gesture List
-        gestures = [f for f in os.listdir(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/') \
-                if os.path.isdir(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', f))]
+        gestures = [f for f in os.listdir(self.database_path)]
         
-        # Convert into np array 
-        gestures = np.array(gestures)   #correzione 
-       
-        # print("Type of gestures: ", gestures)
-
         #Process Gestures
         sequences, labels = self.processGestures(gestures)
 
+        # Convert to Numpy Array
+        gestures = np.array(gestures)   
+
         # Create Input Array
         X = np.array(sequences)
+
         print(f'X Shape: {X.shape}')
         
         # Convert Labels to Integer Categories
@@ -127,15 +141,17 @@ class GestureRecognitionTraining3D:
         self.X_train, self.X_rim, self.Y_train, self.Y_rim = SKLearnModelSelection.train_test_split(X, Y, test_size=0.1)
         self.X_val, self.X_test, self.Y_val, self.Y_test = SKLearnModelSelection.train_test_split(self.X_rim,self.Y_rim, test_size=0.5)
         
-        # Print Dataset Shape
-        print(self.X_train.shape)
-        print(self.X_test.shape)
-        print(self.X_val.shape)
-        print(self.Y_train.shape)
-        print(self.Y_test.shape)
-        print(self.Y_val.shape)
-        print(30,self.X_test.shape[2])
-        print(gestures.shape[0])
+        # Print Dataset split Shape
+        print("\nX training: ", self.X_train.shape)
+        print("Y training: ", self.Y_train.shape)
+        print("X validation: ", self.X_val.shape)
+        print("Y validation: ", self.Y_val.shape)
+        print("X test: ", self.X_test.shape)
+        print("Y test: ", self.Y_test.shape)
+        
+        #Print Neural Network Input and Output Shape
+        print("\nNN input: ", 85, self.X_test.shape[2])
+        print("NN output: ", gestures.shape[0], "\n")
 
         # Convert to Torch Tensors
         self.X_train = torch.from_numpy(self.X_train).float()
@@ -147,26 +163,30 @@ class GestureRecognitionTraining3D:
 
       
         # Create Model
-        model = NeuralNetwork((40, self.X_test.shape[-1]), gestures.shape[0], self.X_train, self.Y_train, self.X_val, self.Y_val, self.X_test, self.Y_test)
+        model = NeuralNetwork((85, self.X_test.shape[2]), gestures.shape[0], self.X_train, self.Y_train, self.X_val, self.Y_val, self.X_test, self.Y_test)
+
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        model.to(device)
+
         
         # Create Trainer 
         trainer = Trainer(
-                   #auto_lr_find=True, 
-                   max_epochs = 250, 
+                   #accelerator= "gpu",
+                   auto_lr_find=True, 
+                   max_epochs = 2000, 
                    fast_dev_run = False, 
                    log_every_n_steps=1, 
-                   callbacks=[EarlyStopping(monitor="val_loss", stopping_threshold = 0.1)]
+                   callbacks=[EarlyStopping(monitor="train_loss", patience = 150, mode = "min", min_delta = 0.01 )]
                                  )    
         
         # Train Model
         trainer.fit(model)
         
         # Save Model
-        with open(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/trained_model.pth', 'wb') as FILE:
+        with open(f'{self.model_path}/py_trained_model.pth', 'wb') as FILE:
             torch.save(model, FILE)
 
         print('Model Saved Correctly')
-       
 
 class CustomDataset(Dataset):
     def __init__(self, X, y, transform = None):
@@ -185,16 +205,16 @@ class CustomDataset(Dataset):
 ############################################################
 
 class NeuralNetwork(pl.LightningModule):
-    def __init__(self, input_shape,output_shape, x_train, y_train, x_val, y_val, x_test, y_test,transform = None):
+
+    def __init__(self, input_shape, output_shape, x_train, y_train, x_val, y_val, x_test, y_test,transform = None):
         super(NeuralNetwork, self).__init__()
 
-        # Make the six layers
-        self.lstm1 = nn.LSTM(input_size=input_shape[-1], hidden_size=64, num_layers=1, batch_first=True, bidirectional=False)
+        self.lstm1 = nn.LSTM(input_size= input_shape[-1], hidden_size=64, num_layers=1, batch_first=True, bidirectional=False)
         self.lstm2 = nn.LSTM(input_size=64, hidden_size=128, num_layers=1, batch_first=True, bidirectional=False)
         self.lstm3 = nn.LSTM(input_size=128, hidden_size=64, num_layers=1, batch_first=True, bidirectional=False)
-        self.fc1 = nn.Linear(64, 64)
-        self.fc2 = nn.Linear(64, 32)
-        self.fc3 = nn.Linear(32, output_shape)
+
+        self.fc1 = nn.Linear(64, 128)
+        self.fc2 = nn.Linear(128, output_shape)
 
         # Get the training parameters
         self.transform = transform
@@ -205,35 +225,35 @@ class NeuralNetwork(pl.LightningModule):
         self.x_test = x_test
         self.y_test = y_test
 
+        # self.accuracy = torchmetrics.Accuracy(task="multiclass", num_classes = output_shape)
+        
     def forward(self, x):
 
         x, _ = self.lstm1(x)
         x = F.relu(x)
-        # x = F.dropout(x, p=0.5)
+        x = F.dropout(x, p=0.5)
         
         x, _ = self.lstm2(x)
         x = F.relu(x)
-        # x = F.dropout(x, p=0.5)
+        x = F.dropout(x, p=0.5)
         
         x, _ = self.lstm3(x)
         x = F.relu(x)
-        # x = F.dropout(x, p=0.5)
-        
+        x = F.dropout(x, p=0.5)
+
         x = x[:, -1, :] # Select only the last output from the LSTM
         
         x = self.fc1(x)
         x = F.relu(x)
-       # x = F.dropout(x, p=0.5)
+        x = F.dropout(x, p=0.5)
         
         x = self.fc2(x)
-        x = F.relu(x)
-        # x = F.dropout(x, p=0.5)
-        
-        x = self.fc3(x)
+
         return x
     
+
     def configure_optimizers(self):
-        optimizer = torch.optim.SGD(self.parameters(), lr = 0.4)
+        optimizer = torch.optim.Adam(self.parameters(), lr = 0.0005) #Poi vedi Adam, e vedi il lr che non è vero che si trova da solo 
         return optimizer
 
     def training_step(self, batch, batch_idx):
@@ -241,6 +261,10 @@ class NeuralNetwork(pl.LightningModule):
         y_pred = self(x)
         loss = F.cross_entropy(y_pred, y)
         self.log("train_loss", loss)
+        
+        # acc = self.accuracy(y_pred, y)
+        # self.log("train_acc", acc, prog_bar= True, on_step=True, on_epoch=False)
+
         return {'loss': loss}
 
     def validation_step(self, batch, batch_idx):
@@ -248,6 +272,10 @@ class NeuralNetwork(pl.LightningModule):
         y_pred = self(x)
         loss = F.cross_entropy(y_pred, y)
         self.log("val_loss", loss)
+        
+        # acc = self.accuracy(y_pred, y)
+        # self.log("val_acc", acc, prog_bar= True, on_step=False, on_epoch=True)
+
         return {'val_loss': loss}
 
     def test_step(self, batch, batch_idx):
@@ -255,6 +283,10 @@ class NeuralNetwork(pl.LightningModule):
         y_pred = self(x)
         loss = F.cross_entropy(y_pred, y)
         self.log('Test loss', loss)
+
+        # acc = self.accuracy(y_pred, y)
+        # self.log("test_acc", acc, prog_bar= True, on_step=False, on_epoch=True)
+
         return {'test_loss': loss}
     
     def train_dataloader(self):
@@ -285,13 +317,9 @@ if __name__ == '__main__':
     #Instantiate Gesture Recognition Training Class
     GRT = GestureRecognitionTraining3D()
     
-
     print("\nSTART TRAINING PHASE\n")  
 
     # Train Network
     GRT.trainPhase()  
 
-    print("\n END RECORDING PHASE\n")  
-
-     
-    
+    print("\n END TRAINING PHASE\n") 

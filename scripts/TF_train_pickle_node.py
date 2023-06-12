@@ -39,6 +39,12 @@ class GestureRecognitionTraining3D:
 
         # Get Package Path
         self.package_path = rospkg.RosPack().get_path('mediapipe_gesture_recognition')
+
+        # Get Model Path
+        self.model_path = os.path.join(self.package_path, 'model')
+
+        # Database bath
+        self.database_path = os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/Padded_file')
         
         # Split Dataset
         self.train_percent = 0.9
@@ -50,54 +56,60 @@ class GestureRecognitionTraining3D:
 ############################################################
 #                 Train Phase Functions                #
 ############################################################
-    def processGestures(self, gestures):  #Chedi a davide se va bene 
+    def processGestures(self, gestures):   
         
         gestures = np.array(gestures)
 
         # Map Gesture Label
-        label_map = {label:num for num, label in enumerate(gestures)}
+        label_map = {label.split(".")[0]:num for num, label in enumerate(gestures)}
         
-        #Create the sequence and labels vectors
-        sequences, labels = [], []
+        video_sequence, labels = [], []
 
         # Loop Over Gestures
-        for gesture in gestures:
-            
-            # Loop Over Video Sequence
-            for sequence in os.listdir(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', str(gesture))):
+        for gesture in sorted(gestures):
 
-                frame = []
-                
-                #Make the right path for loop the frames
-                npy_path = os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', gesture, str(sequence))
+            load_file_path = os.path.join(self.database_path, f'{gesture}')
 
-                #Get the total frames
-                totframe = len(os.listdir(npy_path))
+            # Load File
+            with open(load_file_path, 'rb') as f:
 
-                # Loop Over Frames
-                for frame_num in range(totframe-27, totframe): #Take the last 30Frames 
+                #Get gesture sequence from pkl file 
+                sequence = pickle.load(f)
+
+                #Loop over the sequence
+                for array in sequence:
+
+                    # Get Label
+                    for i in range (np.array(array, dtype= object).shape[0]):
+
+                        #Get the gesture name deleting the extenction name
+                        gesture_name = os.path.splitext(gesture)[0]
+
+                        labels.append(label_map[gesture_name])
+
+                    print(f'Upgrade Label Shape: {np.array(labels).shape}')
                     
-                    # Load Frame
-                    frame.append(np.load(os.path.join(npy_path, str(frame_num)+".npy")))
+                    #Concatenate the padded sequence with the previous one
+                    if np.ndim(np.array(video_sequence)) == 1:
 
-                # Append Gesture Sequence and Label
-                sequences.append(frame)       
-                
-                labels.append(label_map[gesture])
-            
-                # Info Print
-                #print(f'Sequences Shape: {np.array(sequences).shape}')
-                #print(f'Labels Shape: {np.array(labels).shape}')
-                #print("Gesture:", gesture, "Video:", os.path.basename(npy_path), "with frame:", np.shape(frame))
-            
-        return sequences, labels
+                        video_sequence = array
+         
+                    else:
+                        video_sequence = np.concatenate((video_sequence, array), axis = 0)
+                    
+                print("I'm processing |", gesture, "And the array now is", video_sequence.shape, "at time:", time.time())
+
+        # Info Print
+        print(f'Sequences Shape: {np.array(video_sequence).shape}')
+        print(f'Labels Shape: {np.array(labels).shape}')
+
+        return video_sequence, labels
 
 
     def trainPhase(self):
         
-        # Load Gesture List
-        gestures = [f for f in os.listdir(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/') \
-                if os.path.isdir(os.path.join(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/', f))]
+         # Load Gesture List
+        gestures = [f for f in os.listdir(self.database_path)]
         
         # Convert into np array 
         gestures = np.array(gestures)   #correzione 
@@ -119,18 +131,18 @@ class GestureRecognitionTraining3D:
         print(f'X_Test Shape: {X_test.shape[2]} | Y_Test Shape: {Y_test.shape}')
 
         # Create NN Model
-        model = self.createModel(input_shape=(27, X_test.shape[2]), output_shape=gestures.shape[0],
+        model = self.createModel(input_shape=(85, X_test.shape[2]), output_shape=gestures.shape[0],
                                  optimizer='Adam', loss='categorical_crossentropy', metrics=['categorical_accuracy'])
 
         # Train Model
         model.fit(X_train, Y_train, epochs=250,callbacks=self.modelCallbacks())
 
         # Save Model as 'trained_model.pkl'
-        with open(f'{self.package_path}/database/3D_Gestures/{self.gesture_file}/trained_model.pkl', 'wb') as save_file:
+        with open(f'{self.model_path}/TF_trained_model.pkl', 'wb') as save_file:
             pickle.dump(model, save_file, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-        print('Model Saved Correctly')
+        print('Model TF Saved Correctly')
 ############################################################
 #             Neural Newtork by Pytorch lightining         #
 ############################################################
@@ -142,6 +154,8 @@ class GestureRecognitionTraining3D:
 
         # Add LSTM (Long Short-Term Memory) Layers
         model.add(LSTM(64, return_sequences=True, activation='relu', input_shape=input_shape))
+        model.add(Dropout(0.2))
+        model.add(LSTM(128, return_sequences=True, activation='relu'))
         model.add(Dropout(0.5))
         model.add(LSTM(128, return_sequences=True, activation='relu'))
         model.add(Dropout(0.5))
@@ -149,10 +163,18 @@ class GestureRecognitionTraining3D:
         model.add(Dropout(0.5))
 
         # Add Dense (FullyConnected) Layers
+        model.add(Dense(128, activation='relu'))
+        model.add(Dropout(0.5))
+        model.add(Dense(512, activation="relu"))
+        model.add(Dropout(0.5))
+        model.add(Dense(512, activation="relu"))
+        model.add(Dropout(0.5))
+        model.add(Dense(128, activation="relu"))
+        # model.add(Dropout(0.5))
         model.add(Dense(64, activation='relu'))
-        model.add(Dropout(0.5))
+        # model.add(Dropout(0.5))
         model.add(Dense(32, activation='relu'))
-        model.add(Dropout(0.5))
+        # model.add(Dropout(0.5))
         model.add(Dense(output_shape, activation='softmax'))
 
         # Add Compile Parameters
@@ -184,7 +206,7 @@ if __name__ == '__main__':
     # Train Network
     GRT.trainPhase()  
 
-    print("\n END RECORDING PHASE\n")  
+    print("\n END TRAINING PHASE\n")  
 
      
     
