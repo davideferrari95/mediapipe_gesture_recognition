@@ -1,18 +1,16 @@
 <launch>
 
-    <!-- 2D / 3D Recognition Agr -->
-    <arg name="xyz_gesture_recognition" default="True"/>
-    <arg name="xy_gesture_recognition" default="False"/>
+    <!-- 2D / 3D Recognition Arg -->
+    <arg name="gesture_recognition_3D" default="True"/>
 
-    
     <!-- Recognition Precision Arg / Param -->
     <arg   name="recognition_precision_probability" default="0.8"/>
     <param name="recognition_precision_probability" value="$(arg recognition_precision_probability)"/>
-    
+
     <!-- Mediapipe 2D Gesture Recognition Node -->
-    <node unless="$(arg xyz_gesture_recognition)" pkg="mediapipe_gesture_recognition" type="xy_recognition_node.py" name="xy_recognition_node" output="screen"/>
+    <node unless="$(arg gesture_recognition_3D)" pkg="mediapipe_gesture_recognition" type="recognition_node_2D.py" name="recognition_node_2D" output="screen"/>
 
     <!-- Mediapipe 3D Gesture Recognition Node -->
-    <node if="$(arg xy_gesture_recognition)"     pkg="mediapipe_gesture_recognition" type="xyz_recognition_node.py" name="xyz_recognition_node" output="screen"/>
+    <node if="$(arg gesture_recognition_3D)"     pkg="mediapipe_gesture_recognition" type="recognition_node_3D.py" name="recognition_node_3D" output="screen"/>
 
 </launch>

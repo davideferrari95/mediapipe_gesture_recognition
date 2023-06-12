@@ -1,0 +1,20 @@
+<launch>
+
+    <!-- Enable Mediapipe Modules Args -->
+    <arg name="enable_right_hand"   default="true"/>
+    <arg name="enable_left_hand"    default="true"/>
+    <arg name="enable_pose"         default="true"/>
+    <arg name="enable_face"         default="false"/>
+    <arg name="debug"               default="false"/>
+
+    <!-- Enable Mediapipe Modules Parameters -->
+    <param name="enable_right_hand" value="$(arg enable_right_hand)"/>
+    <param name="enable_left_hand"  value="$(arg enable_left_hand)"/>
+    <param name="enable_pose"       value="$(arg enable_pose)"/>
+    <param name="enable_face"       value="$(arg enable_face)"/>
+    <param name="debug"             value="$(arg debug)"/>
+
+    <!-- Mediapipe Stream Node  -->
+    <node pkg="mediapipe_gesture_recognition" type="process_dataset_node.py" name="process_dataset_node" output="screen"/>
+
+</launch>
