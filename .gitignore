@@ -52,3 +52,9 @@ MANIFEST
 # Ignore Large Dataset Folder
 dataset/Jester\ Dataset/20bn-jester-v1
 dataset/Jester\ Dataset/Video
+
+# Ignore Large Database .pkl Files
+*.pkl
+
+# Ignore Large Trained Model File
+model/py_trained_model.pth
