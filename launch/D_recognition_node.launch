@@ -1,0 +1,9 @@
+<launch>
+
+    <!-- Mediapipe 3D Gesture Recognition Node -->
+    <node pkg="mediapipe_gesture_recognition" type="PY_recognition_node.py" name="PY_recognition_node" output="screen"/>
+
+    <!-- PointAt Area - Raw Function Node -->
+    <node pkg="mediapipe_gesture_recognition" type="3Dpoint_node_area.py" name="3Dpoint_node_area" output="screen"/>
+
+</launch>
