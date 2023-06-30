@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy
-import cv2, datetime as dt
+import cv2
 from termcolor import colored
 
 import mediapipe as mp
@@ -55,9 +55,9 @@ class MediapipeStreaming:
     self.ros_rate = rospy.Rate(30)
 
     # Read MediaPipe Modules Parameters (Available Objectron Models = ['Shoe', 'Chair', 'Cup', 'Camera'])
-    self.enable_right_hand     = rospy.get_param('enable_right_hand', False)
-    self.enable_left_hand      = rospy.get_param('enable_left_hand', False)
-    self.enable_pose           = rospy.get_param('enable_pose', False)
+    self.enable_right_hand     = rospy.get_param('enable_right_hand', True)
+    self.enable_left_hand      = rospy.get_param('enable_left_hand', True)
+    self.enable_pose           = rospy.get_param('enable_pose', True)
     self.enable_face           = rospy.get_param('enable_face', False)
     self.enable_face_detection = rospy.get_param('enable_face_detection', False)
     self.enable_objectron      = rospy.get_param('enable_objectron', False)
