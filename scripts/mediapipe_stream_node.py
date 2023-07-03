@@ -2,8 +2,10 @@
 
 import rospy
 import cv2
+import numpy as np
 from termcolor import colored
 
+# Import MediaPipe
 import mediapipe as mp
 from mediapipe_gesture_recognition.msg import Pose, Face, Keypoint, Hand
 
@@ -55,13 +57,17 @@ class MediapipeStreaming:
     self.ros_rate = rospy.Rate(30)
 
     # Read MediaPipe Modules Parameters (Available Objectron Models = ['Shoe', 'Chair', 'Cup', 'Camera'])
-    self.enable_right_hand     = rospy.get_param('enable_right_hand', True)
-    self.enable_left_hand      = rospy.get_param('enable_left_hand', True)
-    self.enable_pose           = rospy.get_param('enable_pose', True)
-    self.enable_face           = rospy.get_param('enable_face', False)
-    self.enable_face_detection = rospy.get_param('enable_face_detection', False)
-    self.enable_objectron      = rospy.get_param('enable_objectron', False)
-    self.objectron_model       = rospy.get_param('objectron_model', 'Shoe')
+    self.enable_right_hand     = rospy.get_param('mediapipe_gesture_recognition/enable_right_hand', True)
+    self.enable_left_hand      = rospy.get_param('mediapipe_gesture_recognition/enable_left_hand', True)
+    self.enable_pose           = rospy.get_param('mediapipe_gesture_recognition/enable_pose', True)
+    self.enable_face           = rospy.get_param('mediapipe_gesture_recognition/enable_face', False)
+    self.enable_face_detection = rospy.get_param('mediapipe_gesture_recognition/enable_face_detection', False)
+    self.enable_objectron      = rospy.get_param('mediapipe_gesture_recognition/enable_objectron', False)
+    self.objectron_model       = rospy.get_param('mediapipe_gesture_recognition/objectron_model', 'Shoe')
+
+    # Read Webcam Parameter -> Webcam / RealSense Input
+    self.webcam    = rospy.get_param('mediapipe_gesture_recognition/webcam', 0)
+    self.realsense = rospy.get_param('mediapipe_gesture_recognition/realsense', False)
 
     # Debug Print
     print(colored(f'\nFunctions Enabled:\n', 'yellow'))
@@ -90,14 +96,60 @@ class MediapipeStreaming:
     self.mp_face_detection = mp.solutions.face_detection
     self.mp_objectron = mp.solutions.objectron
 
-    # Read Webcam Parameter -> Open Video Input
-    self.webcam = rospy.get_param('webcam', 0)
-    self.cap = cv2.VideoCapture(self.webcam)
+    # Initialize Webcam
+    if not self.realsense:
 
-    # Check Webcam Availability
-    if self.cap is None or not self.cap.isOpened():
-      rospy.logerr(f'ERROR: Webcam {self.webcam} Not Available | Starting Default: 0')
-      self.cap = cv2.VideoCapture(0)
+      # Open Video Webcam
+      self.cap = cv2.VideoCapture(self.webcam)
+
+      # Check Webcam Availability
+      if self.cap is None or not self.cap.isOpened():
+        rospy.logerr(f'ERROR: Webcam {self.webcam} Not Available | Starting Default: 0')
+        self.cap = cv2.VideoCapture(0)
+
+    # Initialize Intel RealSense
+    else: self.initRealSense()
+
+  def initRealSense(self):
+
+    # Import RealSense Library
+    import pyrealsense2 as rs
+
+    # Initialize Intel RealSense
+    self.realsense_ctx = rs.context()
+    self.connected_devices = []
+
+    # Search for Connected Devices
+    for i in range(len(self.realsense_ctx.devices)):
+      detected_camera = self.realsense_ctx.devices[i].get_info(rs.camera_info.serial_number)
+      self.connected_devices.append(detected_camera)
+
+    # Using One Camera -> Select Last Device on the List
+    self.device = self.connected_devices[-1]
+
+    # Initialize Pipeline
+    self.pipeline = rs.pipeline()
+    self.config = rs.config()
+
+    # Enable Realsense Streams
+    self.config.enable_device(self.device)
+    self.config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+    self.config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+
+    # Start Pipeline
+    self.profile = self.pipeline.start(self.config)
+
+    # Align Depth to Color
+    self.align_to = rs.stream.color
+    self.align = rs.align(self.align_to)
+
+    # Get Depth Scale
+    self.depth_sensor = self.profile.get_device().first_depth_sensor()
+    self.depth_scale = self.depth_sensor.get_depth_scale()
+
+    # Set Clipping Distance -> 2 Meters Depth -> Behind that the Camera See Nothing
+    self.clipping_distance_in_meters = 2
+    self.clipping_distance = self.clipping_distance_in_meters / self.depth_scale
 
   def newKeypoint(self, landmark, number, name):
 
@@ -109,6 +161,20 @@ class MediapipeStreaming:
     new_keypoint.y = landmark.y
     new_keypoint.z = landmark.z
     new_keypoint.v = landmark.visibility
+
+    # RealSense Keypoint Additional Computation
+    if self.realsense:
+
+      # Compute Keypoint `x` and `y`
+      x = int(new_keypoint.x * len(self.depth_image_flipped[0]))
+      y = int(new_keypoint.y * len(self.depth_image_flipped))
+
+      # Check Depth Limits
+      if x >= len(self.depth_image_flipped[0]): x = len(self.depth_image_flipped[0]) - 1
+      if y >= len(self.depth_image_flipped):    y = len(self.depth_image_flipped) - 1
+
+      # Compute Keypoint Depth
+      new_keypoint.depth = self.depth_image_flipped[y,x] * self.depth_scale
 
     # Assign Keypoint Number and Name
     new_keypoint.keypoint_number = number
@@ -134,6 +200,7 @@ class MediapipeStreaming:
     hand_msg.header.frame_id = 'Hand Right Message' if RightLeft else 'Hand Left Message'
     hand_msg.right_or_left = hand_msg.RIGHT if RightLeft else hand_msg.LEFT
 
+    # If Right / Left Hand Results Exists
     if (((RightLeft == self.RIGHT_HAND) and (handResults.right_hand_landmarks))
      or ((RightLeft == self.LEFT_HAND)  and (handResults.left_hand_landmarks))):
 
@@ -163,6 +230,7 @@ class MediapipeStreaming:
     pose_msg.header.stamp = rospy.Time.now()
     pose_msg.header.frame_id = 'Pose Message'
 
+    # If Pose Results Results Exists
     if poseResults.pose_landmarks:
 
       # Add Keypoints to Pose Message
@@ -191,6 +259,7 @@ class MediapipeStreaming:
     face_msg.header.stamp = rospy.Time.now()
     face_msg.header.frame_id = 'Face Message'
 
+    # If Face Results Results Exists
     if faceResults.face_landmarks:
 
       # Add Keypoints to Face Message
@@ -217,6 +286,7 @@ class MediapipeStreaming:
 
     """ Process Face Detection """
 
+    # If Face Detection Results Results Exists
     if faceDetectionResults.detections:
 
       # Draw Face Detection
@@ -226,6 +296,7 @@ class MediapipeStreaming:
 
     """ Process Objectron """
 
+    # If Objectron Results Results Exists
     if objectronResults.detected_objects:
 
       for detected_object in objectronResults.detected_objects:
@@ -257,7 +328,7 @@ class MediapipeStreaming:
     # Initialize MediaPipe Objectron
     elif self.enable_objectron and self.objectron_model in ['Shoe', 'Chair', 'Cup', 'Camera']:
       self.objectron = self.mp_objectron.Objectron(static_image_mode=False, max_num_objects=5, min_detection_confidence=0.5,
-                                              min_tracking_confidence=0.99, model_name=self.objectron_model) 
+                                                   min_tracking_confidence=0.99, model_name=self.objectron_model, model_complexity=3)
 
   def getResults(self, image):
 
@@ -275,7 +346,7 @@ class MediapipeStreaming:
 
   def processResults(self, image):
 
-    """ Process the Image with Enabled Mediapipe Solutions """
+    """ Process the Image with Enabled MediaPipe Solutions """
 
     # Process Left Hand Landmarks
     if self.enable_left_hand:  self.processHand(self.LEFT_HAND,  self.holistic_results, image)
@@ -302,40 +373,76 @@ class MediapipeStreaming:
     # Initialize MediaPipe Solutions (Holistic, Face Detection, Objectron)
     self.initSolutions()
 
-    # Open Webcam
-    while self.cap.isOpened() and not rospy.is_shutdown():
+    # Open Webcam or Realsense
+    while (self.realsense or self.cap.isOpened()) and not rospy.is_shutdown():
 
       # Start Time
       start_time = rospy.Time.now()
 
-      # Read Webcam Image
-      success, image = self.cap.read()
+      # RealSense Image Process
+      if self.realsense:
 
-      if not success:
-        print('Ignoring empty camera frame.')
-        # If loading a video, use 'break' instead of 'continue'
-        continue
+        # Get Aligned Frames
+        aligned_frames      = self.align.process(self.pipeline.wait_for_frames())
+        aligned_depth_frame = aligned_frames.get_depth_frame()
+        color_frame         = aligned_frames.get_color_frame()
 
-      # To Improve Performance -> Process the Image as Not-Writeable
-      image.flags.writeable = False
-      image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        # Continue if Error in Aligned Frames
+        if not aligned_depth_frame or not self.color_frame:
+          continue
+
+        # Read Image
+        depth_image = np.asanyarray(aligned_depth_frame.get_data())
+        self.depth_image_flipped = cv2.flip(depth_image, 1)
+        color_image = np.asanyarray(color_frame.get_data())
+
+        # Process Image
+        self.depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
+        image = cv2.flip(color_image, 1)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+      # Process Webcam Image
+      else:
+
+        # Read Webcam Image
+        success, image = self.cap.read()
+
+        if not success:
+          print('Ignoring Empty Camera Frame.')
+          # If loading a video, use 'break' instead of 'continue'
+          continue
+
+        # To Improve Performance -> Process the Image as Not-Writeable
+        image.flags.writeable = False
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
       # Get MediaPipe Result
       self.getResults(image)
 
-      # To Draw the Annotations -> Set the Image Writable
-      image.flags.writeable = True
-      image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-
       # Process MediaPipe Results
       self.processResults(image)
 
-      # Flip the image horizontally for a selfie-view display.
-      image = cv2.flip(image, 1)
-
-      # Draw FPS on Image
+      # Compute FPS
       fps = int(1 / (rospy.Time.now() - start_time).to_sec())
-      image = cv2.putText(image, f"FPS: {fps}", (20, 100), cv2.FONT_HERSHEY_SIMPLEX, .5, (0,50,255), 1, cv2.LINE_AA)
+
+      # TODO: Check if Works even with RealSense
+      if not self.realsense:
+
+        # To Draw the Annotations -> Set the Image Writable
+        image.flags.writeable = True
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
+        # Flip the image horizontally for a selfie-view display.
+        image = cv2.flip(image, 1)
+
+        # Draw FPS on Image
+        image = cv2.putText(image, f"FPS: {fps}", (20, 100), cv2.FONT_HERSHEY_SIMPLEX, .5, (0,50,255), 1, cv2.LINE_AA)
+
+      else:
+
+        # Draw FPS on Image
+        image = cv2.putText(image, f"FPS: {fps}", (20, 100), cv2.FONT_HERSHEY_SIMPLEX, .5, (0,50,255), 1, cv2.LINE_AA)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
       # Show Image
       cv2.imshow('MediaPipe Landmarks', image)
@@ -357,4 +464,4 @@ if __name__ == '__main__':
     MediapipeStream.stream()
 
   # Close Webcam
-  MediapipeStream.cap.release()
+  if not MediapipeStream.realsense: MediapipeStream.cap.release()

@@ -100,7 +100,6 @@ include_directories(
 install(PROGRAMS 
 
   # Streams Node
-  scripts/D_mediapipe_stream_node.py
   scripts/mediapipe_stream_node.py
 
   # 2D Gesture Recognition Node
@@ -118,7 +117,7 @@ install(PROGRAMS
   scripts/utils/zero_padding_function.py
 
   # Raw Functions
-  scripts/point_node_area.py
+  scripts/raw_function/3Dpoint_node_area.py
   # scripts/raw_function/point_node.py
   # scripts/raw_function/take_orientation.py
 
