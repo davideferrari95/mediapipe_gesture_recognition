@@ -28,6 +28,9 @@
     <param name="mediapipe_gesture_recognition/enable_objectron"      value="$(arg enable_objectron)"/>
     <param name="mediapipe_gesture_recognition/objectron_model"       value="$(arg objectron_model)"/>
 
+    <!-- Load Stream Node YAML Config File -->
+    <rosparam command="load" file="$(find mediapipe_gesture_recognition)/config/stream_node.yaml"/>
+
     <!-- Mediapipe Stream Node -->
     <node pkg="mediapipe_gesture_recognition" type="mediapipe_stream_node.py" name="mediapipe_stream_node" output="screen"/>
 

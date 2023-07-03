@@ -6,8 +6,11 @@ import numpy as np
 from termcolor import colored
 
 # Import MediaPipe
-import mediapipe as mp
+from mediapipe.python.solutions import drawing_utils, drawing_styles, holistic, face_detection, objectron
 from mediapipe_gesture_recognition.msg import Pose, Face, Keypoint, Hand
+
+# Import Mediapipe Dataclasses
+from utils.mediapipe_types import NormalizedLandmark, HolisticResults, DetectionResult, ObjectronResults
 
 '''
 To Obtain The Available Cameras:
@@ -90,11 +93,11 @@ class MediapipeStreaming:
     self.face_pub       = rospy.Publisher('/mediapipe_gesture_recognition/face', Face, queue_size=1)
 
     # Initialize MediaPipe:
-    self.mp_drawing = mp.solutions.drawing_utils
-    self.mp_drawing_styles = mp.solutions.drawing_styles
-    self.mp_holistic = mp.solutions.holistic
-    self.mp_face_detection = mp.solutions.face_detection
-    self.mp_objectron = mp.solutions.objectron
+    self.mp_drawing        = drawing_utils
+    self.mp_drawing_styles = drawing_styles
+    self.mp_holistic       = holistic
+    self.mp_face_detection = face_detection
+    self.mp_objectron      = objectron
 
     # Initialize Webcam
     if not self.realsense:
@@ -129,7 +132,7 @@ class MediapipeStreaming:
 
     # Initialize Pipeline
     self.pipeline = rs.pipeline()
-    self.config = rs.config()
+    self.config   = rs.config()
 
     # Enable Realsense Streams
     self.config.enable_device(self.device)
@@ -151,7 +154,7 @@ class MediapipeStreaming:
     self.clipping_distance_in_meters = 2
     self.clipping_distance = self.clipping_distance_in_meters / self.depth_scale
 
-  def newKeypoint(self, landmark, number, name):
+  def newKeypoint(self, landmark:NormalizedLandmark, number:int, name:str):
 
     """ New Keypoint Creation Function """
 
@@ -182,7 +185,7 @@ class MediapipeStreaming:
 
     return new_keypoint
 
-  def processHand(self, RightLeft, handResults, image):
+  def processHand(self, RightLeft:bool, handResults:HolisticResults, image:np.ndarray):
 
     """ Process Hand Keypoints """
 
@@ -214,7 +217,7 @@ class MediapipeStreaming:
       # Publish Hand Keypoint Message
       self.hand_right_pub.publish(hand_msg) if RightLeft else self.hand_left_pub.publish(hand_msg)
 
-  def processPose(self, poseResults, image):
+  def processPose(self, poseResults:HolisticResults, image:np.ndarray):
 
     """ Process Pose Keypoints """
 
@@ -242,7 +245,7 @@ class MediapipeStreaming:
       # Publish Pose Keypoint Message
       self.pose_pub.publish(pose_msg)
 
-  def processFace(self, faceResults, image):
+  def processFace(self, faceResults:HolisticResults, image:np.ndarray):
 
     """ Process Face Keypoints """
 
@@ -282,7 +285,7 @@ class MediapipeStreaming:
 
       self.face_pub.publish(face_msg)
 
-  def processFaceDetection(self, faceDetectionResults, image):
+  def processFaceDetection(self, faceDetectionResults:DetectionResult, image:np.ndarray):
 
     """ Process Face Detection """
 
@@ -292,7 +295,7 @@ class MediapipeStreaming:
       # Draw Face Detection
       for detection in faceDetectionResults.detections: self.mp_drawing.draw_detection(image, detection)
 
-  def processObjectron(self, objectronResults, image):
+  def processObjectron(self, objectronResults:ObjectronResults, image:np.ndarray):
 
     """ Process Objectron """
 
@@ -317,20 +320,44 @@ class MediapipeStreaming:
 
     """ Initialize MediaPipe Solutions """
 
+    # Read Holistic Parameters
+    static_image_mode        = rospy.get_param('/holistic/static_image_mode', False)
+    model_complexity         = rospy.get_param('/holistic/model_complexity', 1)
+    smooth_landmarks         = rospy.get_param('/holistic/smooth_landmarks', True)
+    enable_segmentation      = rospy.get_param('/holistic/enable_segmentation', False)
+    smooth_segmentation      = rospy.get_param('/holistic/smooth_segmentation', True)
+    refine_face_landmarks    = rospy.get_param('/holistic/refine_face_landmarks', True)
+    min_detection_confidence = rospy.get_param('/holistic/min_detection_confidence', 0.5)
+    min_tracking_confidence  = rospy.get_param('/holistic/min_tracking_confidence', 0.5)
+
     # Initialize MediaPipe Holistic
     if self.enable_right_hand or self.enable_left_hand or self.enable_pose or self.enable_face:
-      self.holistic = self.mp_holistic.Holistic(refine_face_landmarks=True, min_detection_confidence=0.5, min_tracking_confidence=0.5)
+      self.holistic = self.mp_holistic.Holistic(static_image_mode, model_complexity, smooth_landmarks, enable_segmentation, smooth_segmentation,
+                                                refine_face_landmarks, min_detection_confidence, min_tracking_confidence)
+
+    # Read Face Detection Parameters
+    min_detection_confidence = rospy.get_param('/face_detection/min_detection_confidence', 0.5)
+    model_selection          = rospy.get_param('/face_detection/model_selection', 0)
 
     # Initialize MediaPipe Face Detection
-    elif self.enable_face_detection:
-      self.face_detection = self.mp_face_detection.FaceDetection(model_selection=0, min_detection_confidence=0.5)
+    if self.enable_face_detection:
+      self.face_detection = self.mp_face_detection.FaceDetection(min_detection_confidence, model_selection)
+
+    # Read Objectron Parameters
+    static_image_mode        = rospy.get_param('/objectron/static_image_mode', False)
+    max_num_objects          = rospy.get_param('/objectron/max_num_objects', 5)
+    min_detection_confidence = rospy.get_param('/objectron/min_detection_confidence', 0.5)
+    min_tracking_confidence  = rospy.get_param('/objectron/min_tracking_confidence', 0.99)
+    focal_length             = rospy.get_param('/objectron/focal_length', [1,1])
+    principal_point          = rospy.get_param('/objectron/principal_point', [0,0])
+    image_size               = rospy.get_param('/objectron/image_size', None)
 
     # Initialize MediaPipe Objectron
-    elif self.enable_objectron and self.objectron_model in ['Shoe', 'Chair', 'Cup', 'Camera']:
-      self.objectron = self.mp_objectron.Objectron(static_image_mode=False, max_num_objects=5, min_detection_confidence=0.5,
-                                                   min_tracking_confidence=0.99, model_name=self.objectron_model, model_complexity=3)
+    if self.enable_objectron and self.objectron_model in ['Shoe', 'Chair', 'Cup', 'Camera']:
+      self.objectron = self.mp_objectron.Objectron(static_image_mode, max_num_objects, min_detection_confidence, min_tracking_confidence,
+                                                   self.objectron_model, focal_length, principal_point, None if image_size=='None' else image_size)
 
-  def getResults(self, image):
+  def getResults(self, image:np.ndarray):
 
     """ Get MediaPipe Results """
 
@@ -344,7 +371,7 @@ class MediapipeStreaming:
     # Get Objectron Results from MediaPipe
     if self.enable_objectron: self.objectron_results = self.objectron.process(image)
 
-  def processResults(self, image):
+  def processResults(self, image:np.ndarray):
 
     """ Process the Image with Enabled MediaPipe Solutions """
 
