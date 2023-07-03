@@ -92,13 +92,6 @@ class MediapipeStreaming:
     self.pose_pub       = rospy.Publisher('/mediapipe_gesture_recognition/pose', Pose, queue_size=1)
     self.face_pub       = rospy.Publisher('/mediapipe_gesture_recognition/face', Face, queue_size=1)
 
-    # Initialize MediaPipe:
-    self.mp_drawing        = drawing_utils
-    self.mp_drawing_styles = drawing_styles
-    self.mp_holistic       = holistic
-    self.mp_face_detection = face_detection
-    self.mp_objectron      = objectron
-
     # Initialize Webcam
     if not self.realsense:
 
@@ -112,6 +105,9 @@ class MediapipeStreaming:
 
     # Initialize Intel RealSense
     else: self.initRealSense()
+
+    # Initialize MediaPipe Solutions (Holistic, Face Detection, Objectron)
+    self.initMediaPipeSolutions()
 
   def initRealSense(self):
 
@@ -154,9 +150,16 @@ class MediapipeStreaming:
     self.clipping_distance_in_meters = 2
     self.clipping_distance = self.clipping_distance_in_meters / self.depth_scale
 
-  def initSolutions(self):
+  def initMediaPipeSolutions(self):
 
     """ Initialize MediaPipe Solutions """
+
+    # Initialize MediaPipe:
+    self.mp_drawing        = drawing_utils
+    self.mp_drawing_styles = drawing_styles
+    self.mp_holistic       = holistic
+    self.mp_face_detection = face_detection
+    self.mp_objectron      = objectron
 
     # Read Holistic Parameters
     static_image_mode        = rospy.get_param('/holistic/static_image_mode', False)
@@ -357,48 +360,28 @@ class MediapipeStreaming:
           detected_object.rotation,
           detected_object.translation)
 
-  def getResults(self, image:np.ndarray):
-
-    """ Get MediaPipe Results """
-
-    # Get Holistic Results from MediaPipe Holistic
-    if self.enable_right_hand or self.enable_left_hand or self.enable_pose or self.enable_face:
-      self.holistic_results = self.holistic.process(image)
-
-    # Get Face Detection Results from MediaPipe
-    if self.enable_face_detection: self.face_detection_results = self.face_detection.process(image)
-
-    # Get Objectron Results from MediaPipe
-    if self.enable_objectron: self.objectron_results = self.objectron.process(image)
-
   def processResults(self, image:np.ndarray):
 
-    """ Process the Image with Enabled MediaPipe Solutions """
+    """ Process the Image with Enabled MediaPipe Solutions and Get MediaPipe Results """
 
-    # Process Left Hand Landmarks
-    if self.enable_left_hand:  self.processHand(self.LEFT_HAND,  self.holistic_results, image)
+    # Get Holistic, Face Detection, Objectron Results from MediaPipe
+    holistic_results       = self.holistic.process(image)       if self.enable_right_hand or self.enable_left_hand or self.enable_pose or self.enable_face else None
+    face_detection_results = self.face_detection.process(image) if self.enable_face_detection else None
+    objectron_results      = self.objectron.process(image)      if self.enable_objectron else None
 
-    # Process Right Hand Landmarks
-    if self.enable_right_hand: self.processHand(self.RIGHT_HAND, self.holistic_results, image)
+    # Process Left/Right Hand, Pose and Face Landmarks
+    if self.enable_left_hand:  self.processHand(self.LEFT_HAND,  holistic_results, image)
+    if self.enable_right_hand: self.processHand(self.RIGHT_HAND, holistic_results, image)
+    if self.enable_pose: self.processPose(holistic_results, image)
+    if self.enable_face: self.processFace(holistic_results, image)
 
-    # Process Pose Landmarks
-    if self.enable_pose: self.processPose(self.holistic_results, image)
-
-    # Process Face Landmarks
-    if self.enable_face: self.processFace(self.holistic_results, image)
-
-    # Process Face Detection
-    if self.enable_face_detection: self.processFaceDetection(self.face_detection_results, image)
-
-    # Process Objectron
-    if self.enable_objectron: self.processObjectron(self.objectron_results, image)
+    # Process Face Detection and Objectron
+    if self.enable_face_detection: self.processFaceDetection(face_detection_results, image)
+    if self.enable_objectron: self.processObjectron(objectron_results, image)
 
   def stream(self):
 
     """ Main Spinner Function """
-
-    # Initialize MediaPipe Solutions (Holistic, Face Detection, Objectron)
-    self.initSolutions()
 
     # Open Webcam or Realsense
     while (self.realsense or self.cap.isOpened()) and not rospy.is_shutdown():
@@ -443,10 +426,7 @@ class MediapipeStreaming:
         image.flags.writeable = False
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-      # Get MediaPipe Result
-      self.getResults(image)
-
-      # Process MediaPipe Results
+      # Get and Process MediaPipe Results
       self.processResults(image)
 
       # Compute FPS
