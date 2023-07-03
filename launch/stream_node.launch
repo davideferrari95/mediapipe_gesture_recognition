@@ -12,6 +12,9 @@
     <arg name="enable_face_detection"   default="false"/>
     <arg name="enable_objectron"        default="false"/>
 
+    <!-- FaceMesh Connections Mode -> 0: Contours, 1: Tesselation-->
+    <arg name="face_mesh_mode" default="0"/>
+
     <!-- Available Models = 'Shoe', 'Chair', 'Cup', 'Camera' -->
     <arg name="objectron_model"         default="Shoe"/>
 
@@ -27,6 +30,7 @@
     <param name="mediapipe_gesture_recognition/enable_face_detection" value="$(arg enable_face_detection)"/>
     <param name="mediapipe_gesture_recognition/enable_objectron"      value="$(arg enable_objectron)"/>
     <param name="mediapipe_gesture_recognition/objectron_model"       value="$(arg objectron_model)"/>
+    <param name="mediapipe_gesture_recognition/face_mesh_mode"        value="$(arg face_mesh_mode)"/>
 
     <!-- Load Stream Node YAML Config File -->
     <rosparam command="load" file="$(find mediapipe_gesture_recognition)/config/stream_node.yaml"/>

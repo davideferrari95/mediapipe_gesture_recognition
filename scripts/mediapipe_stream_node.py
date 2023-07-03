@@ -171,6 +171,11 @@ class MediapipeStreaming:
     min_detection_confidence = rospy.get_param('/holistic/min_detection_confidence', 0.5)
     min_tracking_confidence  = rospy.get_param('/holistic/min_tracking_confidence', 0.5)
 
+    # Read FaceMesh Parameters (0: Contours, 1: Tesselation)
+    face_mesh_mode = rospy.get_param('mediapipe_gesture_recognition/face_mesh_mode', 0)
+    self.face_mesh_connections = self.mp_holistic.FACEMESH_TESSELATION if face_mesh_mode == 1 else self.mp_holistic.FACEMESH_CONTOURS
+    self.face_mesh_connection_drawing_spec = self.mp_drawing_styles.get_default_face_mesh_tesselation_style() if face_mesh_mode == 1 else self.mp_drawing_styles.get_default_face_mesh_contours_style()
+
     # Initialize MediaPipe Holistic
     if self.enable_right_hand or self.enable_left_hand or self.enable_pose or self.enable_face:
       self.holistic = self.mp_holistic.Holistic(static_image_mode, model_complexity, smooth_landmarks, enable_segmentation, smooth_segmentation,
@@ -297,9 +302,9 @@ class MediapipeStreaming:
     self.mp_drawing.draw_landmarks(
         image,
         faceResults.face_landmarks,
-        self.mp_holistic.FACEMESH_CONTOURS,
+        connections=self.face_mesh_connections,
         landmark_drawing_spec=None,
-        connection_drawing_spec=self.mp_drawing_styles.get_default_face_mesh_contours_style())
+        connection_drawing_spec=self.face_mesh_connection_drawing_spec)
 
     # Create Face Message
     face_msg = Face()
