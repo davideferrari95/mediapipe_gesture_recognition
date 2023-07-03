@@ -154,6 +154,47 @@ class MediapipeStreaming:
     self.clipping_distance_in_meters = 2
     self.clipping_distance = self.clipping_distance_in_meters / self.depth_scale
 
+  def initSolutions(self):
+
+    """ Initialize MediaPipe Solutions """
+
+    # Read Holistic Parameters
+    static_image_mode        = rospy.get_param('/holistic/static_image_mode', False)
+    model_complexity         = rospy.get_param('/holistic/model_complexity', 1)
+    smooth_landmarks         = rospy.get_param('/holistic/smooth_landmarks', True)
+    enable_segmentation      = rospy.get_param('/holistic/enable_segmentation', False)
+    smooth_segmentation      = rospy.get_param('/holistic/smooth_segmentation', True)
+    refine_face_landmarks    = rospy.get_param('/holistic/refine_face_landmarks', True)
+    min_detection_confidence = rospy.get_param('/holistic/min_detection_confidence', 0.5)
+    min_tracking_confidence  = rospy.get_param('/holistic/min_tracking_confidence', 0.5)
+
+    # Initialize MediaPipe Holistic
+    if self.enable_right_hand or self.enable_left_hand or self.enable_pose or self.enable_face:
+      self.holistic = self.mp_holistic.Holistic(static_image_mode, model_complexity, smooth_landmarks, enable_segmentation, smooth_segmentation,
+                                                refine_face_landmarks, min_detection_confidence, min_tracking_confidence)
+
+    # Read Face Detection Parameters
+    min_detection_confidence = rospy.get_param('/face_detection/min_detection_confidence', 0.5)
+    model_selection          = rospy.get_param('/face_detection/model_selection', 0)
+
+    # Initialize MediaPipe Face Detection
+    if self.enable_face_detection:
+      self.face_detection = self.mp_face_detection.FaceDetection(min_detection_confidence, model_selection)
+
+    # Read Objectron Parameters
+    static_image_mode        = rospy.get_param('/objectron/static_image_mode', False)
+    max_num_objects          = rospy.get_param('/objectron/max_num_objects', 5)
+    min_detection_confidence = rospy.get_param('/objectron/min_detection_confidence', 0.5)
+    min_tracking_confidence  = rospy.get_param('/objectron/min_tracking_confidence', 0.99)
+    focal_length             = rospy.get_param('/objectron/focal_length', [1,1])
+    principal_point          = rospy.get_param('/objectron/principal_point', [0,0])
+    image_size               = rospy.get_param('/objectron/image_size', None)
+
+    # Initialize MediaPipe Objectron
+    if self.enable_objectron and self.objectron_model in ['Shoe', 'Chair', 'Cup', 'Camera']:
+      self.objectron = self.mp_objectron.Objectron(static_image_mode, max_num_objects, min_detection_confidence, min_tracking_confidence,
+                                                   self.objectron_model, focal_length, principal_point, None if image_size=='None' else image_size)
+
   def newKeypoint(self, landmark:NormalizedLandmark, number:int, name:str):
 
     """ New Keypoint Creation Function """
@@ -315,47 +356,6 @@ class MediapipeStreaming:
           image,
           detected_object.rotation,
           detected_object.translation)
-
-  def initSolutions(self):
-
-    """ Initialize MediaPipe Solutions """
-
-    # Read Holistic Parameters
-    static_image_mode        = rospy.get_param('/holistic/static_image_mode', False)
-    model_complexity         = rospy.get_param('/holistic/model_complexity', 1)
-    smooth_landmarks         = rospy.get_param('/holistic/smooth_landmarks', True)
-    enable_segmentation      = rospy.get_param('/holistic/enable_segmentation', False)
-    smooth_segmentation      = rospy.get_param('/holistic/smooth_segmentation', True)
-    refine_face_landmarks    = rospy.get_param('/holistic/refine_face_landmarks', True)
-    min_detection_confidence = rospy.get_param('/holistic/min_detection_confidence', 0.5)
-    min_tracking_confidence  = rospy.get_param('/holistic/min_tracking_confidence', 0.5)
-
-    # Initialize MediaPipe Holistic
-    if self.enable_right_hand or self.enable_left_hand or self.enable_pose or self.enable_face:
-      self.holistic = self.mp_holistic.Holistic(static_image_mode, model_complexity, smooth_landmarks, enable_segmentation, smooth_segmentation,
-                                                refine_face_landmarks, min_detection_confidence, min_tracking_confidence)
-
-    # Read Face Detection Parameters
-    min_detection_confidence = rospy.get_param('/face_detection/min_detection_confidence', 0.5)
-    model_selection          = rospy.get_param('/face_detection/model_selection', 0)
-
-    # Initialize MediaPipe Face Detection
-    if self.enable_face_detection:
-      self.face_detection = self.mp_face_detection.FaceDetection(min_detection_confidence, model_selection)
-
-    # Read Objectron Parameters
-    static_image_mode        = rospy.get_param('/objectron/static_image_mode', False)
-    max_num_objects          = rospy.get_param('/objectron/max_num_objects', 5)
-    min_detection_confidence = rospy.get_param('/objectron/min_detection_confidence', 0.5)
-    min_tracking_confidence  = rospy.get_param('/objectron/min_tracking_confidence', 0.99)
-    focal_length             = rospy.get_param('/objectron/focal_length', [1,1])
-    principal_point          = rospy.get_param('/objectron/principal_point', [0,0])
-    image_size               = rospy.get_param('/objectron/image_size', None)
-
-    # Initialize MediaPipe Objectron
-    if self.enable_objectron and self.objectron_model in ['Shoe', 'Chair', 'Cup', 'Camera']:
-      self.objectron = self.mp_objectron.Objectron(static_image_mode, max_num_objects, min_detection_confidence, min_tracking_confidence,
-                                                   self.objectron_model, focal_length, principal_point, None if image_size=='None' else image_size)
 
   def getResults(self, image:np.ndarray):
 
