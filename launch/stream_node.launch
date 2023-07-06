@@ -36,6 +36,6 @@
     <rosparam command="load" file="$(find mediapipe_gesture_recognition)/config/stream_node.yaml"/>
 
     <!-- Mediapipe Stream Node -->
-    <node pkg="mediapipe_gesture_recognition" type="mediapipe_stream_node.py" name="mediapipe_stream_node" output="screen"/>
+    <node pkg="mediapipe_gesture_recognition" type="stream_node.py" name="mediapipe_stream_node" output="screen"/>
 
 </launch>
