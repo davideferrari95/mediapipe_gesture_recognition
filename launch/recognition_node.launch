@@ -10,10 +10,8 @@
     <arg   name="recognition_precision_probability" default="0.8"/>
     <param name="recognition_precision_probability" value="$(arg recognition_precision_probability)"/>
 
-    <!-- Mediapipe 2D Gesture Recognition Node -->
+    <!-- Mediapipe 2D/3D Gesture Recognition Node -->
     <node unless="$(arg gesture_recognition_3D)" pkg="mediapipe_gesture_recognition" type="recognition_node_2D.py" name="mediapipe_2D_recognition_node" output="screen"/>
-
-    <!-- Mediapipe 3D Gesture Recognition Node -->
     <node if="$(arg gesture_recognition_3D)"     pkg="mediapipe_gesture_recognition" type="recognition_node.py" name="mediapipe_3D_recognition_node" output="screen"/>
 
     <!-- Point-At Area - Raw Function Node -->
