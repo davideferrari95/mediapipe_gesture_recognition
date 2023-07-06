@@ -26,6 +26,7 @@ class GestureRecognition3D:
 
     # ROS Initialization
     rospy.init_node('mediapipe_gesture_recognition_node', anonymous=True)
+    # TODO: why 20 FPS ?
     self.rate = rospy.Rate(20)
 
     # Initialize Keypoint Messages
