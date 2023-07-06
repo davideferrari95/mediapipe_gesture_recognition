@@ -261,7 +261,7 @@ class MediapipeStreaming:
 
         # Append Keypoint
         hand_msg.keypoints.append(self.newKeypoint(handResults.right_hand_landmarks.landmark[i] if RightLeft else handResults.left_hand_landmarks.landmark[i],
-                                                   i, self.hand_landmarks_names[i]))
+                                                   i+1, self.hand_landmarks_names[i]))
 
       # Publish Hand Keypoint Message
       self.hand_right_pub.publish(hand_msg) if RightLeft else self.hand_left_pub.publish(hand_msg)
@@ -289,7 +289,7 @@ class MediapipeStreaming:
       for i in range(len(poseResults.pose_landmarks.landmark)):
 
         # Append Keypoint
-        pose_msg.keypoints.append(self.newKeypoint(poseResults.pose_landmarks.landmark[i], i, self.pose_landmarks_names[i]))
+        pose_msg.keypoints.append(self.newKeypoint(poseResults.pose_landmarks.landmark[i], i+1, self.pose_landmarks_names[i]))
 
       # Publish Pose Keypoint Message
       self.pose_pub.publish(pose_msg)
@@ -324,7 +324,7 @@ class MediapipeStreaming:
         new_keypoint.z = faceResults.face_landmarks.landmark[i].z
 
         # Assign Keypoint Number
-        new_keypoint.keypoint_number = i
+        new_keypoint.keypoint_number = i+1
 
         # Assign Keypoint Name (468 Landmarks -> Names = FACE_KEYPOINT_1 ...)
         new_keypoint.keypoint_name = f'FACE_KEYPOINT_{i+1}'

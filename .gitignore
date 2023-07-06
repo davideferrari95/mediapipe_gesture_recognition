@@ -57,4 +57,4 @@ dataset/Jester\ Dataset/Video
 *.pkl
 
 # Ignore Large Trained Model File
-model/py_trained_model.pth
+*.pth
