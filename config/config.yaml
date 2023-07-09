@@ -1,0 +1,27 @@
+# Enable Mediapipe Solutions
+enable_right_hand: true
+enable_left_hand: true
+enable_pose: true
+enable_face: false
+
+# Training Parameters
+min_epochs: 100
+max_epochs: 2000
+patience: 50
+batch_size: 32
+optimizer: Adam
+learning_rate: 0.0005
+loss_function: cross_entropy
+train_set_size: 0.7
+validation_set_size: 0.15
+test_set_size: 0.15
+
+# Torch Compilation
+compilation_mode: default
+torch_compilation: false
+fast_dev_run: true
+
+hydra:
+  run:
+    dir: 
+      /home/davide/ROS/multimodal_fusion_ws/src/Mediapipe/mediapipe_gesture_recognition/data/outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
