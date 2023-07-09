@@ -58,3 +58,6 @@ dataset/Jester\ Dataset/Video
 
 # Ignore Large Trained Model File
 *.pth
+
+# Ignore Hydra Logs
+data/*
