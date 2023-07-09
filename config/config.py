@@ -24,4 +24,5 @@ class Params:
   # Torch Compilation
   compilation_mode:     str
   torch_compilation:    bool
+  profiler:             bool
   fast_dev_run:         bool

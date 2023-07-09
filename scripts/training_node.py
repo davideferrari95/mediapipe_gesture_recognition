@@ -11,6 +11,7 @@ from pytorch_lightning import Trainer, LightningModule, loggers as pl_loggers
 from pytorch_lightning.profilers import SimpleProfiler
 from pytorch_lightning.callbacks import EarlyStopping
 from torch.utils.data import Dataset, DataLoader, random_split
+from utils.utils import StartTrainingCallback, StartValidationCallback, StartTestingCallback
 from utils.utils import set_hydra_absolute_path
 
 # Import Signal Handler Function
@@ -55,10 +56,11 @@ def main(cfg: Params):
     log_every_n_steps = 1,
 
     # Instantiate Early Stopping Callback
-    callbacks = [EarlyStopping(monitor='train_loss', mode='min', min_delta=0.01, patience=cfg.patience, verbose=True)],
+    callbacks = [StartTrainingCallback(), StartValidationCallback(), StartTestingCallback(),
+                 EarlyStopping(monitor='train_loss', mode='min', min_delta=0.01, patience=cfg.patience, verbose=True)],
 
     # Use Python Profiler
-    profiler = SimpleProfiler(),
+    profiler = SimpleProfiler() if cfg.profiler else None,
 
     # Custom TensorBoard Logger
     logger = pl_loggers.TensorBoardLogger(save_dir=f'{FOLDER}/data/logs/'),
@@ -155,8 +157,6 @@ class NeuralClassifier(LightningModule):
     # Reshaping Data for the Fully Connected Layers
     hn = hn.view(-1, self.hidden_size)
 
-    print(f'Output Shape: {output.shape} | Hidden State Shape: {hn.shape}')
-
     # Forward Pass through Fully Connected Layers
     out = self.fc_layers(hn)
 
@@ -178,12 +178,8 @@ class NeuralClassifier(LightningModule):
     # Forward Pass with Softmax for Classification
     y_pred = F.softmax(self(x), dim=1)
 
-    print(f'\n\nx data type: {x.dtype} | y data type: {y.dtype} | y_pred data type: {y_pred.dtype}')
-    print(f'x shape: {x.shape} | y shape: {y.shape} | y_pred shape: {y_pred.shape}\n\n')
-
     # Compute Loss
-    loss = nn.MSELoss(y_pred, y)
-    # loss = self.loss_function(y_pred, y)
+    loss = self.loss_function(y_pred, y.float())
     self.log(log_name, loss)
 
     # TODO: Compute Accuracy
@@ -195,7 +191,7 @@ class NeuralClassifier(LightningModule):
   def training_step(self, batch, batch_idx):
 
     loss = self.compute_loss(batch, 'train_loss')
-    return {'train_loss': loss}
+    return {'loss': loss}
 
   def validation_step(self, batch, batch_idx):
 
