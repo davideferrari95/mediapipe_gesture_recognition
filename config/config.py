@@ -12,6 +12,7 @@ class Params:
   # Training Parameters
   min_epochs:           int
   max_epochs:           int
+  min_delta:            float
   patience:             int
   batch_size:           int
   optimizer:            str
