@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import sys, os, signal
+import sys, os, signal, logging
 import pickle, numpy as np
 from typing import Union, Tuple
 from termcolor import colored
@@ -11,8 +11,15 @@ from pytorch_lightning import Trainer, LightningModule, loggers as pl_loggers
 from pytorch_lightning.profilers import SimpleProfiler
 from pytorch_lightning.callbacks import EarlyStopping
 from torch.utils.data import Dataset, DataLoader, random_split
-from utils.utils import StartTrainingCallback, StartValidationCallback, StartTestingCallback
-from utils.utils import set_hydra_absolute_path
+from utils.utils import StartTrainingCallback, StartTestingCallback
+from utils.utils import set_hydra_absolute_path, save_parameters, save_model
+
+# Ignore Torch Compiler INFO
+logging.getLogger('torch._dynamo').setLevel(logging.ERROR)
+logging.getLogger('torch._inductor').setLevel(logging.ERROR)
+
+# Set Torch Matmul Precision
+torch.set_float32_matmul_precision('high')
 
 # Import Signal Handler Function
 from utils.utils import FOLDER, DEVICE, handle_signal, delete_pycache_folders
@@ -37,7 +44,7 @@ def main(cfg: Params):
 
   # Create Gesture Recognition Training
   GRT = GestureRecognitionTraining3D(cfg)
-  model = GRT.getModel()
+  model, model_path = GRT.getModel()
 
   # Prepare Dataset
   train_dataloader, val_dataloader, test_dataloader = GRT.getDataloaders()
@@ -52,11 +59,10 @@ def main(cfg: Params):
     # Hyperparameters
     min_epochs = cfg.min_epochs,
     max_epochs = cfg.max_epochs,
-    auto_lr_find = True,
     log_every_n_steps = 1,
 
     # Instantiate Early Stopping Callback
-    callbacks = [StartTrainingCallback(), StartValidationCallback(), StartTestingCallback(),
+    callbacks = [StartTrainingCallback(), StartTestingCallback(),
                  EarlyStopping(monitor='train_loss', mode='min', min_delta=0.01, patience=cfg.patience, verbose=True)],
 
     # Use Python Profiler
@@ -78,11 +84,7 @@ def main(cfg: Params):
   trainer.test(compiled_model, dataloaders=test_dataloader)
 
   # Save Model
-  with open(f'{FOLDER}/model/py_trained_model.pth', 'wb') as FILE: torch.save(compiled_model, FILE)
-  print(colored('\n\nModel Saved Correctly\n\n', 'green'))
-
-  # TODO: Edit Model Path + Add Auto-Rename Model
-  # self.model_path = os.path.join(package_path, f'model/{gesture_file}')
+  save_model(model_path, 'model.pth', compiled_model)
 
   # Delete Cache Folders
   delete_pycache_folders()
@@ -124,13 +126,17 @@ class NeuralClassifier(LightningModule):
 
     super(NeuralClassifier, self).__init__()
 
+    # print(f'\n\nInput Shape: {input_shape} | Output Shape: {output_shape}')
+    # print(f'Optimizer: {optimizer} | Learning Rate: {lr} | Loss Function: {loss_function}\n\n')
+
     # Compute Input and Output Sizes
     self.input_size, self.output_size = input_shape[1], output_shape[0]
     self.hidden_size, self.num_layers = 256, 1
 
     # Create LSTM Layers (Input Shape = Number of Flattened Keypoints (300 / 1734))
     self.lstm = nn.LSTM(input_size=self.input_size, hidden_size=self.hidden_size, num_layers=self.num_layers,
-                        batch_first=True, bidirectional=False, dropout=0.5).to(DEVICE)
+                        batch_first=True, bidirectional=False).to(DEVICE)
+                        # batch_first=True, bidirectional=False, dropout=0.5).to(DEVICE)
 
     # Create Fully Connected Layers
     self.fc_layers = nn.Sequential(
@@ -160,6 +166,9 @@ class NeuralClassifier(LightningModule):
     # Forward Pass through Fully Connected Layers
     out = self.fc_layers(hn)
 
+    # Softmax for Classification
+    out = F.softmax(out, dim=1)
+
     return out
 
   def configure_optimizers(self):
@@ -167,16 +176,13 @@ class NeuralClassifier(LightningModule):
     # Return Optimizer
     return self.optimizer(self.parameters(), lr = self.learning_rate)
 
-    # TODO: Test Auto-Learning Rate
-    return self.optimizer(self.parameters())
-
   def compute_loss(self, batch:Tuple[torch.Tensor, torch.Tensor], log_name:str) -> torch.Tensor:
 
     # Get X,Y from Batch
     x, y = batch
 
-    # Forward Pass with Softmax for Classification
-    y_pred = F.softmax(self(x), dim=1)
+    # Forward Pass
+    y_pred = self(x)
 
     # Compute Loss
     loss = self.loss_function(y_pred, y.float())
@@ -217,14 +223,15 @@ class GestureRecognitionTraining3D:
     if cfg.enable_face:       gesture_file += 'Face'
     print(colored(f'\n\nLoading: {gesture_file} Configuration', 'yellow'))
 
-    # Get Database Path
-    database_path = os.path.join(FOLDER, f'database/3D_Gestures/{gesture_file}/Gestures/')
+    # Get Database and Model Path
+    database_path   = os.path.join(FOLDER, f'database/3D_Gestures/{gesture_file}/Gestures/')
+    self.model_path = os.path.join(FOLDER, f'model/3D_Gestures/{gesture_file}')
 
     # Prepare Dataloaders
     dataset_shapes = self.prepareDataloaders(database_path, cfg.batch_size, cfg.train_set_size, cfg.validation_set_size, cfg.test_set_size)
 
     # Create Model
-    self.createModel(dataset_shapes)
+    self.createModel(self.model_path, dataset_shapes, cfg.optimizer, cfg.learning_rate, cfg.loss_function)
 
   def prepareDataloaders(self, database_path:str, batch_size:int, train_set_size:float, validation_set_size:float, test_set_size:float) -> Tuple[torch.Size, torch.Size]:
 
@@ -263,22 +270,25 @@ class GestureRecognitionTraining3D:
 
     return self.train_dataloader, self.val_dataloader, self.test_dataloader
 
-  def createModel(self, dataset_shape:Tuple[torch.Size, torch.Size], optimizer:str='Adam', lr:float=0.0005, loss_function:str='cross_entropy'):
+  def createModel(self, model_path:str, dataset_shape:Tuple[torch.Size, torch.Size], optimizer:str='Adam', lr:float=0.0005, loss_function:str='cross_entropy'):
 
     # Get Input and Output Sizes from Dataset Shapes
     input_size, output_size = torch.Size(list(dataset_shape[0])[1:]), torch.Size(list(dataset_shape[1])[1:])
     # print(f'\n\nInput Shape: {dataset_shape[0]} | Output Shape: {dataset_shape[1]}')
     # print(f'Input Size: {input_size} | Output Size: {output_size}')
 
+    # Save Model Parameters
+    save_parameters(model_path, 'model_parameters.yaml', input_size=list(input_size), output_size=list(output_size), optimizer=optimizer, lr=lr, loss_function=loss_function)
+
     # Create NeuralNetwork Model
     self.model = NeuralClassifier(input_size, output_size, optimizer, lr, loss_function)
     self.model.to(torch.device("cuda:0" if torch.cuda.is_available() else "cpu"))
 
-  def getModel(self) -> LightningModule:
+  def getModel(self) -> Tuple[LightningModule, str]:
 
-    """ Get Model """
+    """ Get NN Model and Model Path """
 
-    return self.model
+    return self.model, self.model_path
 
   def processGestures(self, database_path:str, gestures:np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
 
