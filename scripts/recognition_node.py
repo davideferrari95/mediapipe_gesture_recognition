@@ -2,6 +2,7 @@
 
 import rospy, rospkg, os
 import torch, numpy as np
+from tqdm import tqdm
 from typing import List, Union
 from termcolor import colored
 
@@ -17,6 +18,9 @@ class GestureRecognition3D:
 
   # Available Gesture Dictionary
   available_gestures = {}
+
+  # ROS Gesture Message
+  gesture_msg = Int32MultiArray()
 
   def __init__(self):
 
@@ -60,10 +64,10 @@ class GestureRecognition3D:
     try:
 
       # Load the Trained Model for the Detected Landmarks
-      FILE = open(f'{package_path}/model/3D_Gestures/{gesture_file}/model.pth', 'rb')
+      FILE = open(f'{package_path}/model/{gesture_file}/model.pth', 'rb')
 
       # Read Network Parameters from YAML File
-      parameters = load_parameters(f'{package_path}/model/3D_Gestures/{gesture_file}/model_parameters.yaml')
+      parameters = load_parameters(f'{package_path}/model/{gesture_file}/model_parameters.yaml')
       parameters['input_size']  = torch.Size(tuple(i for i in parameters['input_size']))
       parameters['output_size'] = torch.Size(tuple(i for i in parameters['output_size']))
       # print(colored(f'Parameters: {parameters}\n\n', 'green'))
@@ -81,9 +85,12 @@ class GestureRecognition3D:
     except FileNotFoundError: print(colored(f'ERROR: Model {gesture_file} Not Available\n\n', 'red')); exit(0)
 
     # Load the Names of the Saved Actions
-    self.actions = np.sort(np.array([os.path.splitext(f)[0] for f in os.listdir(f'{package_path}/database/3D_Gestures/{gesture_file}/Gestures')]))
+    self.actions = np.sort(np.array([os.path.splitext(f)[0] for f in os.listdir(f'{package_path}/database/{gesture_file}/Gestures')]))
     for index, action in enumerate(self.actions): self.available_gestures[str(action)] = index
     print(colored(f'Available Gestures: {self.available_gestures}\n\n', 'green'))
+
+    # Clear Terminal
+    os.system('clear')
 
   def initKeypointMessages(self):
 
@@ -149,12 +156,25 @@ class GestureRecognition3D:
 
     return None
 
+  def print_probabilities(self, prob:torch.Tensor):
+
+    # TODO: Better Gesture Print
+    tqdm.write("{:<30} | {:<10}".format('Type of Gesture', 'Probability\n'))
+
+    for i in range(len(self.actions)):
+
+      # Print Colored Gesture
+      color = 'red' if prob[i] < 0.45 else 'yellow' if prob[i] <0.8 else 'green'
+      tqdm.write("{:<30} | {:<}".format(self.actions[i], colored("{:<.1f}%".format(prob[i]*100), color)))
+
+    print("\n\n\n\n\n\n\n\n\n\n")
+
   # Gesture Recognition Function
   def Recognition(self):
 
     """ Gesture Recognition Function """
 
-    with torch.no_grad():
+    while not rospy.is_shutdown():
 
       # Check [Right Hand, Left Hand, Pose, Face] Landmarks -> Create a Tensor List
       landmarks_list = [self.process_landmarks(enable, name) for enable, name in
@@ -172,39 +192,24 @@ class GestureRecognition3D:
       # Get the Index of the Highest Probability
       index = int(prob.argmax(dim = 0))
 
-      # Print the Name of the Gesture Recognized
+      # Send Gesture Message if Probability is Higher than the Threshold
       if (prob[index] > self.recognition_precision_probability):
 
-        # Get Recognized Gesture from the Gesture List
-        recognized_gesture = self.actions[index]
-
         # TODO: Fix Fusion -> Redo Training with Changed Gestures
-        # Publish ROS Message
-        msg = Int32MultiArray()
-        msg.data = [self.available_gestures[recognized_gesture]]
-        self.fusion_pub.publish(msg)
+        # Publish ROS Message with the Name of the Gesture Recognized
+        self.gesture_msg.data = [self.available_gestures[self.actions[index]]]
+        self.fusion_pub.publish(self.gesture_msg)
 
-      # TODO: Better Gesture Print
-      print("\n\n\n\n\n\n\n\n\n")
-      print("{:<30} | {:<10}".format('Type of Gesture', 'Probability\n'))
+      # Print Gesture Probability
+      self.print_probabilities(prob)
 
-      for i in range(len(self.actions)):
-
-        # Print Colored Gesture
-        color = 'red' if prob[i] < 0.45 else 'yellow' if prob[i] <0.8 else 'green'
-        print("{:<30} | {:<}".format(self.actions[i], colored("{:<.1f}%".format(prob[i]*100), color)))
-
-      print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+      # Sleep Rate Time
+      self.rate.sleep()
 
 if __name__ == '__main__':
 
   # Instantiate Gesture Recognition Class
   GR = GestureRecognition3D()
 
-  while not rospy.is_shutdown():
-
-    # Main Recognition Function
-    GR.Recognition()
-
-    # Sleep Rate Time
-    GR.rate.sleep()
+  # Main Recognition Function
+  GR.Recognition()
