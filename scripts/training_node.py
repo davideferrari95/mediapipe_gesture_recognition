@@ -227,8 +227,8 @@ class GestureRecognitionTraining3D:
     print(colored(f'\n\nLoading: {gesture_file} Configuration', 'yellow'))
 
     # Get Database and Model Path
-    database_path   = os.path.join(FOLDER, f'database/3D_Gestures/{gesture_file}/Gestures/')
-    self.model_path = os.path.join(FOLDER, f'model/3D_Gestures/{gesture_file}')
+    database_path   = os.path.join(FOLDER, f'database/{gesture_file}/Gestures/')
+    self.model_path = os.path.join(FOLDER, f'model/{gesture_file}')
 
     # Prepare Dataloaders
     dataset_shapes = self.prepareDataloaders(database_path, cfg.batch_size, cfg.train_set_size, cfg.validation_set_size, cfg.test_set_size)
