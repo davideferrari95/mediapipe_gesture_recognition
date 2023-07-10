@@ -1,23 +1,19 @@
 #!/usr/bin/env python3
 
 import rospy, rospkg, os
-import numpy as np
+import torch, numpy as np
 from typing import List, Union
 from termcolor import colored
 
 # Import Neural Network and Model
-from matplotlib.animation import FuncAnimation
-from PY_train_pickle_node import NeuralNetwork, CustomDataset, GestureRecognitionTraining3D
-import torch
+from training_node import NeuralClassifier
+from utils.utils import DEVICE, load_parameters
 
 # Import ROS Messages
 from std_msgs.msg import Int32MultiArray
 from mediapipe_gesture_recognition.msg import Pose, Face, Hand, Keypoint
 
 class GestureRecognition3D:
-
-  # Number of Consecutive Frames Needed to Make our Prediction
-  sequence = []
 
   # Available Gesture Dictionary
   available_gestures = {}
@@ -39,7 +35,7 @@ class GestureRecognition3D:
     rospy.Subscriber('/mediapipe_gesture_recognition/face',       Face, self.FaceCallback)
 
     # Fusion Publisher
-    self.fusion_pub = rospy.Publisher('gesture', Int32MultiArray, queue_size=1000)
+    self.fusion_pub = rospy.Publisher('gesture', Int32MultiArray, queue_size=1)
 
     # Read Mediapipe Modules Parameters
     self.enable_right_hand = rospy.get_param('mediapipe_gesture_recognition/enable_right_hand', False)
@@ -64,17 +60,29 @@ class GestureRecognition3D:
     try:
 
       # Load the Trained Model for the Detected Landmarks
-      FILE = open(f'{package_path}/model/{gesture_file}/model.pth', 'rb')
+      FILE = open(f'{package_path}/model/3D_Gestures/{gesture_file}/model.pth', 'rb')
 
-      self.model = torch.load(FILE)
+      # Read Network Parameters from YAML File
+      parameters = load_parameters(f'{package_path}/model/3D_Gestures/{gesture_file}/model_parameters.yaml')
+      parameters['input_size']  = torch.Size(tuple(i for i in parameters['input_size']))
+      parameters['output_size'] = torch.Size(tuple(i for i in parameters['output_size']))
+      # print(colored(f'Parameters: {parameters}\n\n', 'green'))
+
+      # Create the Sequence Tensor of the Right Shape
+      self.sequence = torch.zeros(parameters['input_size'], dtype=torch.float32, device=DEVICE)
+      # print(colored(f'Sequence Shape: {self.sequence.shape}\n\n', 'green'))
+
+      # Load the Trained Model
+      self.model = NeuralClassifier(*parameters.values()).to(DEVICE)
+      self.model.load_state_dict(torch.load(FILE))
       self.model.eval()
 
     # ERROR: Model Not Available
     except FileNotFoundError: print(colored(f'ERROR: Model {gesture_file} Not Available\n\n', 'red')); exit(0)
 
     # Load the Names of the Saved Actions
-    self.actions = np.array([os.path.splitext(f)[0] for f in os.listdir(f'{package_path}/database/3D_Gestures/{gesture_file}/Gestures')])
-    for index, action in enumerate(np.sort(self.actions)): self.available_gestures[str(action)] = index
+    self.actions = np.sort(np.array([os.path.splitext(f)[0] for f in os.listdir(f'{package_path}/database/3D_Gestures/{gesture_file}/Gestures')]))
+    for index, action in enumerate(self.actions): self.available_gestures[str(action)] = index
     print(colored(f'Available Gestures: {self.available_gestures}\n\n', 'green'))
 
   def initKeypointMessages(self):
@@ -121,7 +129,7 @@ class GestureRecognition3D:
   def FaceCallback(self, data:Face):      self.face_new_msg  = data
 
   # Process Landmark Messages Function
-  def process_landmarks(self, enable:bool, message_name:str, Landmarks:List[np.ndarray]):
+  def process_landmarks(self, enable:bool, message_name:str) -> Union[torch.Tensor, None]:
 
     """ Process Landmark Messages """
 
@@ -131,14 +139,15 @@ class GestureRecognition3D:
       # Get Message Variable Name
       message: Union[Hand, Pose, Face] = getattr(self, message_name)
 
-      # Extend Landmark Vector -> Saving New Keypoints
-      Landmarks.append(np.array([[value.x, value.y, value.z, value.v] for value in message.keypoints]).flatten() if message else np.zeros(33*4))
-      #Landmarks.append(np.zeros(468 * 3) if message is None else np.array([[res.x, res.y, res.z, res.v] for res in message.keypoints]).flatten())
+      # Create Landmark Tensor -> Saving New Keypoints
+      landmarks = torch.tensor([[value.x, value.y, value.z, value.v] for value in message.keypoints], device=DEVICE).flatten()
 
-      # Clean Message
+      # Clean Received Message
       # for value in message.keypoints: value.x, value.y, value.z, value.v = 0.0, 0.0, 0.0, 0.0
 
-    return Landmarks
+      return landmarks
+
+    return None
 
   # Gesture Recognition Function
   def Recognition(self):
@@ -147,59 +156,45 @@ class GestureRecognition3D:
 
     with torch.no_grad():
 
-      # Coordinate Vector
-      Landmarks = []
+      # Check [Right Hand, Left Hand, Pose, Face] Landmarks -> Create a Tensor List
+      landmarks_list = [self.process_landmarks(enable, name) for enable, name in
+                        zip([self.enable_right_hand, self.enable_left_hand, self.enable_pose, self.enable_face],
+                            ['right_new_msg', 'left_new_msg', 'pose_new_msg', 'face_new_msg'])]
 
-      # Check [Right Hand, Left Hand, Pose, Face] Landmarks
-      Landmarks = self.process_landmarks(self.enable_right_hand, 'right_new_msg', Landmarks)
-      Landmarks = self.process_landmarks(self.enable_left_hand,  'left_new_msg',  Landmarks)
-      Landmarks = self.process_landmarks(self.enable_pose, 'pose_new_msg', Landmarks)
-      Landmarks = self.process_landmarks(self.enable_face, 'face_new_msg', Landmarks)
+      # Remove None Values from the List, Concatenate the Tensors and Append to our Sequence
+      keypoints = torch.cat([t for t in landmarks_list if t is not None], dim=0).unsqueeze(0)
+      assert keypoints.shape[1] == self.sequence.shape[1], f'ERROR: Wrong Keypoints Shape: {keypoints.shape[1]} instead of {self.sequence.shape[1]}'
+      self.sequence = torch.cat((self.sequence[1:], keypoints), dim=0)
 
-      # Concatenate Landmarks Vectors
-      keypoints = np.concatenate(Landmarks)
+      # Obtain the Probability of Each Gesture
+      prob:torch.Tensor = self.model(self.sequence.unsqueeze(0))[0]
 
-      # Append the Landmarks Coordinates from the Last Frame to our Sequence
-      self.sequence.append(keypoints)
+      # Get the Index of the Highest Probability
+      index = int(prob.argmax(dim = 0))
 
-      # Analyze Only the Last 30 Frames
-      self.sequence = self.sequence[-85:]
+      # Print the Name of the Gesture Recognized
+      if (prob[index] > self.recognition_precision_probability):
 
-      if len(self.sequence) == 85:
+        # Get Recognized Gesture from the Gesture List
+        recognized_gesture = self.actions[index]
 
-        # Obtain the Probability of Each Gesture
-        output = self.model(torch.Tensor(self.sequence).view(1, 85, -1))
+        # TODO: Fix Fusion -> Redo Training with Changed Gestures
+        # Publish ROS Message
+        msg = Int32MultiArray()
+        msg.data = [self.available_gestures[recognized_gesture]]
+        self.fusion_pub.publish(msg)
 
-        # Get the Probability of the Most Probable Gesture
-        prob = torch.softmax(output, dim=1)[0]
+      # TODO: Better Gesture Print
+      print("\n\n\n\n\n\n\n\n\n")
+      print("{:<30} | {:<10}".format('Type of Gesture', 'Probability\n'))
 
-        # Get the Index of the Highest Probability
-        index = int(prob.argmax(dim = 0))
+      for i in range(len(self.actions)):
 
-        # Print the Name of the Gesture Recognized
-        if (prob[index] > self.recognition_precision_probability):
+        # Print Colored Gesture
+        color = 'red' if prob[i] < 0.45 else 'yellow' if prob[i] <0.8 else 'green'
+        print("{:<30} | {:<}".format(self.actions[i], colored("{:<.1f}%".format(prob[i]*100), color)))
 
-          # Get Recognized Gesture from the Gesture List
-          recognized_gesture = self.actions[index]
-          # print(f'Gesture Recognized: "{recognized_gesture}"')
-
-          # TODO: Fix Fusion -> Redo Training with Changed Gestures
-          # Publish ROS Message
-          msg = Int32MultiArray()
-          msg.data = [self.available_gestures[recognized_gesture]]
-          self.fusion_pub.publish(msg)
-
-          # TODO: Better Gesture Print
-          print("\n\n\n\n\n\n\n\n\n")
-          print("{:<30} | {:<10}".format('Type of Gesture', 'Probability\n'))
-
-          for i in range(len(self.actions)):
-
-            # Print Colored Gesture
-            color = 'red' if prob.numpy()[i] < 0.45 else 'yellow' if prob.numpy()[i] <0.8 else 'green'
-            print("{:<30} | {:<}".format(self.actions[i], colored("{:<.1f}%".format(prob.numpy()[i]*100), color)))
-
-          print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+      print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
 
 if __name__ == '__main__':
 
