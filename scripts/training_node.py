@@ -63,7 +63,7 @@ def main(cfg: Params):
 
     # Instantiate Early Stopping Callback
     callbacks = [StartTrainingCallback(), StartTestingCallback(),
-                 EarlyStopping(monitor='train_loss', mode='min', min_delta=0.01, patience=cfg.patience, verbose=True)],
+                 EarlyStopping(monitor='train_loss', mode='min', min_delta=cfg.min_delta, patience=cfg.patience, verbose=True)],
 
     # Use Python Profiler
     profiler = SimpleProfiler() if cfg.profiler else None,
@@ -131,7 +131,7 @@ class NeuralClassifier(LightningModule):
 
     # Compute Input and Output Sizes
     self.input_size, self.output_size = input_shape[1], output_shape[0]
-    self.hidden_size, self.num_layers = 256, 1
+    self.hidden_size, self.num_layers = 512, 1
 
     # Create LSTM Layers (Input Shape = Number of Flattened Keypoints (300 / 1734))
     self.lstm = nn.LSTM(input_size=self.input_size, hidden_size=self.hidden_size, num_layers=self.num_layers,
@@ -141,7 +141,10 @@ class NeuralClassifier(LightningModule):
     # Create Fully Connected Layers
     self.fc_layers = nn.Sequential(
       nn.ReLU(),
-      nn.Linear(self.hidden_size, 128),
+      nn.Linear(self.hidden_size, 256),
+      nn.ReLU(),
+      # nn.Dropout(0.5),
+      nn.Linear(256, 128),
       nn.ReLU(),
       nn.Linear(128, self.output_size)
     ).to(DEVICE)
