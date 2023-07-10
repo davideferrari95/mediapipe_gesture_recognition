@@ -1,9 +1,21 @@
-.# Utilities
-hydra-core>=1.3.1
-numpy<=1.24
-ruamel.yaml
-termcolor
+# Utilities
+hydra-core>=1.3.2
+numpy>=1.25.1
+ruamel.yaml>=0.17.32
+pyrealsense2>=2.54.1.5217
+tqdm>=4.65.0
+termcolor>=2.3.0
+
+# Mediapipe
+mediapipe>=0.10.1
+
+# ROS
+rospkg>=1.5.0
 
 # Torch
-pytorch-lightning>=2.0.1
-torch==2.0.0
+torch>=2.0.1
+torchaudio>=2.0.2
+torchvision>=0.15.2
+torchmetrics>=1.0.0
+pytorch-lightning>=2.0.4
+tensorboard>=2.13.0
