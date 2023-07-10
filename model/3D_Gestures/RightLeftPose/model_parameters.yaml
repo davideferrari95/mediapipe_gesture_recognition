@@ -1,0 +1,8 @@
+input_size:
+- 85
+- 300
+output_size:
+- 4
+optimizer: Adam
+lr: 0.001
+loss_function: cross_entropy

@@ -56,8 +56,5 @@ dataset/Jester\ Dataset/Video
 # Ignore Large Database .pkl Files
 *.pkl
 
-# Ignore Large Trained Model File
-*.pth
-
 # Ignore Hydra Logs
 data/*
