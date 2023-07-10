@@ -1,12 +1,13 @@
-import os, shutil
-import rospy
-import torch
+import os, shutil, yaml, torch
+from pytorch_lightning import LightningModule
 
 # Get Torch Device ('cuda' or 'cpu')
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Countdown Function
 def countdown(num_of_secs):
+
+  import rospy
 
   print("\nAcquisition Starts in:")
 
@@ -26,22 +27,62 @@ FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__),"../.."))
 def set_hydra_absolute_path():
 
   import ruamel.yaml
-  yaml = ruamel.yaml.YAML()
+  ruamel_yaml = ruamel.yaml.YAML()
 
   hydra_config_file = os.path.join(FOLDER, 'config/config.yaml')
 
   # Load Hydra `config.yaml` File
   with open(hydra_config_file, 'r') as file:
-    yaml_data = yaml.load(file)
+    yaml_data = ruamel_yaml.load(file)
 
   # Edit Hydra Run Directory
   yaml_data['hydra']['run']['dir'] = os.path.join(FOLDER, r'data/outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}')
 
   # Write Hydra `config.yaml` File
   with open(hydra_config_file, 'w') as file:
-    yaml.dump(yaml_data, file)
+    ruamel_yaml.dump(yaml_data, file)
 
-def delete_pycache_folders():
+def save_parameters(path, file_name, **kwargs):
+
+  """ Save Parameters Function """
+
+  # Create Directory if it Doesn't Exist
+  os.makedirs(path, exist_ok=True)
+
+  with open(os.path.join(path, file_name), 'w') as file:
+    yaml.dump(kwargs, file, sort_keys=False)
+
+def load_parameters(file_name) -> dict:
+
+  """ Load Parameters Function """
+
+  with open(file_name, 'r') as file:
+    parameters = yaml.safe_load(file)
+
+  return parameters
+
+def save_model(path:str, file_name:str, model:LightningModule):
+
+  """ Save File Function """
+
+  # Create Directory if it Doesn't Exist
+  os.makedirs(path, exist_ok=True)
+  counter = 1
+
+  # Check if the File Already Exists
+  while os.path.exists(os.path.join(path, file_name)):
+
+    # Get the File Name and Extension
+    file_name, file_extension = os.path.splitext(file_name)
+
+    # Append a Number to the File Name to Make it Unique
+    counter += 1
+    file_name = f'{file_name}_{counter}{file_extension}'
+
+  with open(os.path.join(path, file_name), 'wb') as FILE: torch.save(model.state_dict(), FILE)
+  print(colored('\n\nModel Saved Correctly\n\n', 'green'))
+
+def delete_pycache_folders(verbose:bool=False):
 
   """ Delete Python `__pycache__` Folders Function """
 
@@ -52,11 +93,13 @@ def delete_pycache_folders():
 
       # Get `__pycache__` Path
       pycache_folder = os.path.join(root, "__pycache__")
-      print(f"Deleting {pycache_folder}")
+      if verbose: print(f"Deleting {pycache_folder}")
 
       # Delete `__pycache__`
       try: shutil.rmtree(pycache_folder)
       except Exception as e: print(f"An error occurred while deleting {pycache_folder}: {e}")
+
+  if verbose: print('\n\n')
 
 def handle_signal(signal, frame):
 
