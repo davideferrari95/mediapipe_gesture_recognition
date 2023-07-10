@@ -8,9 +8,9 @@ enable_face: false
 min_epochs: 100
 max_epochs: 2000
 patience: 50
-batch_size: 32
+batch_size: 64
 optimizer: Adam
-learning_rate: 0.0005
+learning_rate: 1e-3
 loss_function: cross_entropy
 train_set_size: 0.7
 validation_set_size: 0.15
@@ -20,7 +20,7 @@ test_set_size: 0.15
 compilation_mode: default
 torch_compilation: false
 profiler: false
-fast_dev_run: true
+fast_dev_run: false
 
 hydra:
   run:
