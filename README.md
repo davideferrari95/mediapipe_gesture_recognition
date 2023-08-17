@@ -1,3 +1,6 @@
+# mediapipe_gesture_recognition
+Gesture Recognition with Google MediaPipe
+
 # Step to follow to use Mediapipe Gesture Recognition
 
 ## Step 1: 
