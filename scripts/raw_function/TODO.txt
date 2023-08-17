@@ -1,0 +1,6 @@
+0) Setup robot 
+1) Compra Materiale 
+2) Setup solo alexa
+3) Setup alexa e gesti 
+4) Fai esperimenti 
+5) Sistema tesi 

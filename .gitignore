@@ -50,6 +50,4 @@ MANIFEST
 .vscode/*
 
 # Ignore Large Dataset Folder
-dataset/20bn-jester-v1
-dataset/Gesture_frames
-.npy
+*.pkl

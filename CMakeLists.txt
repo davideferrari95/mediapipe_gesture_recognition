@@ -11,7 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   std_msgs
   sensor_msgs
-  cv_bridge
+  # cv_bridge
   image_transport
 )
 
@@ -100,19 +100,28 @@ include_directories(
 
 install(PROGRAMS 
 
+#utils
+scripts/utils/dataset_converter.py
+scripts/utils/process_dataset_node.py
+scripts/utils/zero_padding_function.py
+
+#Raw Function
+scripts/raw_function/3Dpoint_node_area.py
+scripts/raw_function/point_node.py
+scripts/raw_function/take_orientation.py
+
 #Streams Node
+scripts/D_mediapipe_stream_node.py
 scripts/mediapipe_stream_node.py
-scripts/mediapipe_video_node.py
+scripts/prova_mediapipe_realsense.py
+scripts/prova_mio_realsense.py
 
 #Training node
-scripts/pytorch_training_node.py
-scripts/pytorch_videotraining_node.py
-scripts/tensorflow_training_node.py
-scripts/tensorflow_videotraining_node.py
-
+scripts/PY_train_pickle_node.py
+scripts/TF_train_pickle_load.py
 #Recognition node
-scripts/pytorch_recognition_node.py
-scripts/tensorflow_recognition_node.py
+scripts/PY_recognition_node.py
+scripts/TF_recognition_node.py
 
 
   DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}

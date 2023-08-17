@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+#!/home/alberto/miniconda3/envs/myclone/bin python3
+
 
 import rospy
 import cv2
 import mediapipe as mp
 from mediapipe_gesture_recognition.msg import Pose, Face, Keypoint, Hand
-
+import datetime as dt
 
 '''
 To Obtain The Available Cameras: 
@@ -59,7 +61,7 @@ class MediapipeStreaming:
     self.available_objectron_models = ['Shoe', 'Chair', 'Cup', 'Camera']
     
     # Video Input
-    self.webcam = webcam
+    self.webcam = 0
 
     # Boolean Parameters
     self.enable_right_hand = enable_right_hand
@@ -103,6 +105,8 @@ class MediapipeStreaming:
     new_keypoint.z = landmark.z
     new_keypoint.v = landmark.visibility
 
+    
+
     # Assign Keypoint Number and Name
     new_keypoint.keypoint_number = number
     new_keypoint.keypoint_name = name
@@ -139,6 +143,8 @@ class MediapipeStreaming:
         # Append Keypoint
         hand_msg.keypoints.append(self.newKeypoint(handResults.right_hand_landmarks.landmark[i] if RightLeft else handResults.left_hand_landmarks.landmark[i], 
                                                    i, self.hand_landmarks_names[i]))
+        
+      
       
       #print(hand_msg)       Trying to indentify the right amount of keypoints number 
 
@@ -166,7 +172,7 @@ class MediapipeStreaming:
 
         # Append Keypoint
         pose_msg.keypoints.append(self.newKeypoint(poseResults.pose_landmarks.landmark[i], i, self.pose_landmarks_names[i]))
-      
+        
       #print(pose_msg)  Trying to indentify the right amount of keypoints number 
 
       # Publish Pose Keypoint Message
@@ -308,6 +314,9 @@ class MediapipeStreaming:
     
     # Open Webcam
     while self.cap.isOpened() and not rospy.is_shutdown():
+
+      start_time = dt.datetime.today().timestamp()
+
       
       # Read Webcam Image
       success, image = self.cap.read()
@@ -330,9 +339,18 @@ class MediapipeStreaming:
       
       # Process Mediapipe Results
       self.processResults(image)
+
+      image = cv2.flip(image, 1)
+      #Display FPS
+      time_diff = dt.datetime.today().timestamp() - start_time
+      fps = int(1 / time_diff)
+      org = (20, 100)
+      color = (0,50,255)
+      thickness = 1
+      image = cv2.putText(image, f"FPS: {fps}", org, cv2.FONT_HERSHEY_SIMPLEX, .5, color, thickness, cv2.LINE_AA)
       
       # Flip the image horizontally for a selfie-view display.
-      cv2.imshow('MediaPipe Landmarks', cv2.flip(image, 1))
+      cv2.imshow('MediaPipe Landmarks', image)
       if cv2.waitKey(5) & 0xFF == 27:
         break
 
