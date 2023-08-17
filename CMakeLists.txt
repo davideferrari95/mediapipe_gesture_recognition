@@ -100,16 +100,11 @@ include_directories(
 install(PROGRAMS 
 
   # Streams Node
-  scripts/mediapipe_stream_node.py
+  scripts/stream_node.py
 
-  # 2D Gesture Recognition Node
-  scripts/gesture_2D/recognition_node_2D.py
-  scripts/gesture_2D/training_node_2D.py
-
-  # 3D Gesture Recognition Node
-  scripts/PY_train_pickle_node.py
-  scripts/PY_recognition_node.py
-  scripts/TF_recognition_node.py
+  # Gesture Recognition Node
+  scripts/training_node.py
+  scripts/recognition_node.py
 
   # Utils
   scripts/utils/dataset_converter.py
