@@ -134,45 +134,77 @@ class NeuralClassifier(LightningModule):
     self.hidden_size, self.num_layers = 512, 1
 
     # Create LSTM Layers (Input Shape = Number of Flattened Keypoints (300 / 1734))
-    self.lstm = nn.LSTM(input_size=self.input_size, hidden_size=self.hidden_size, num_layers=self.num_layers,
-                        batch_first=True, bidirectional=False).to(DEVICE)
-                        # batch_first=True, bidirectional=False, dropout=0.5).to(DEVICE)
+    # self.lstm = nn.LSTM(input_size=self.input_size, hidden_size=self.hidden_size, num_layers=self.num_layers,
+    #                     batch_first=True, bidirectional=False).to(DEVICE)
+    #                     # batch_first=True, bidirectional=False, dropout=0.5).to(DEVICE)
 
-    # Create Fully Connected Layers
-    self.fc_layers = nn.Sequential(
-      nn.ReLU(),
-      nn.Linear(self.hidden_size, 256),
-      nn.ReLU(),
-      # nn.Dropout(0.5),
-      nn.Linear(256, 128),
-      nn.ReLU(),
-      nn.Linear(128, self.output_size)
-    ).to(DEVICE)
+    # # Create Fully Connected Layers
+    # self.fc_layers = nn.Sequential(
+    #   nn.ReLU(),
+    #   nn.Linear(self.hidden_size, 256),
+    #   nn.ReLU(),
+    #   # nn.Dropout(0.5),
+    #   nn.Linear(256, 128),
+    #   nn.ReLU(),
+    #   nn.Linear(128, self.output_size)
+    # ).to(DEVICE)
+
+    # Create LSTM Layers -> Alberto Version
+    self.lstm1 = nn.LSTM(input_size=self.input_size, hidden_size=64, num_layers=1, batch_first=True, bidirectional=False)
+    self.lstm2 = nn.LSTM(input_size=64, hidden_size=128, num_layers=1, batch_first=True, bidirectional=False)
+    self.lstm3 = nn.LSTM(input_size=128, hidden_size=64, num_layers=1, batch_first=True, bidirectional=False)
+    self.fc1 = nn.Linear(64, 128)
+    self.fc2 = nn.Linear(128, self.output_size)
 
     # Instantiate Loss Function and Optimizer
     self.loss_function = getattr(torch.nn.functional, loss_function)
     self.optimizer     = getattr(torch.optim, optimizer)
     self.learning_rate = lr
 
-  def forward(self, x:torch.Tensor) -> torch.Tensor:
+  # def forward(self, x:torch.Tensor) -> torch.Tensor:
 
-    # Hidden State and Internal State
-    h_0 = torch.autograd.Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_size)).to(DEVICE)
-    c_0 = torch.autograd.Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_size)).to(DEVICE)
+  #   # Hidden State and Internal State
+  #   h_0 = torch.autograd.Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_size)).to(DEVICE)
+  #   c_0 = torch.autograd.Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_size)).to(DEVICE)
 
-    # Propagate Input through LSTM
-    output, (hn, cn) = self.lstm(x, (h_0, c_0))
+  #   # Propagate Input through LSTM
+  #   output, (hn, cn) = self.lstm(x, (h_0, c_0))
 
-    # Reshaping Data for the Fully Connected Layers
-    hn = hn.view(-1, self.hidden_size)
+  #   # Reshaping Data for the Fully Connected Layers
+  #   hn = hn.view(-1, self.hidden_size)
 
-    # Forward Pass through Fully Connected Layers
-    out = self.fc_layers(hn)
+  #   # Forward Pass through Fully Connected Layers
+  #   out = self.fc_layers(hn)
 
-    # Softmax for Classification
-    out = F.softmax(out, dim=1)
+  #   # Softmax for Classification
+  #   out = F.softmax(out, dim=1)
 
-    return out
+  #   return out
+
+  def forward(self, x):
+
+    x, _ = self.lstm1(x)
+    x = F.relu(x)
+    x = F.dropout(x, p=0.5)
+
+    x, _ = self.lstm2(x)
+    x = F.relu(x)
+    x = F.dropout(x, p=0.5)
+
+    x, _ = self.lstm3(x)
+    x = F.relu(x)
+    x = F.dropout(x, p=0.5)
+
+    # Select only the last output from the LSTM
+    x = x[:, -1, :]
+
+    x = self.fc1(x)
+    x = F.relu(x)
+    x = F.dropout(x, p=0.5)
+
+    x = self.fc2(x)
+
+    return x
 
   def configure_optimizers(self):
 

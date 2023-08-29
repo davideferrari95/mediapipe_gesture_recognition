@@ -187,7 +187,11 @@ class GestureRecognition3D:
       self.sequence = torch.cat((self.sequence[1:], keypoints), dim=0)
 
       # Obtain the Probability of Each Gesture
-      prob:torch.Tensor = self.model(self.sequence.unsqueeze(0))[0]
+      # prob:torch.Tensor = self.model(self.sequence.unsqueeze(0))[0]
+      prob:torch.Tensor = self.model(self.sequence.unsqueeze(0))
+
+      # Get the Probability of the Most Probable Gesture
+      prob = torch.softmax(prob, dim=1)[0]
 
       # Get the Index of the Highest Probability
       index = int(prob.argmax(dim = 0))
