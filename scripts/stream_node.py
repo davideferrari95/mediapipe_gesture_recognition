@@ -403,7 +403,7 @@ class MediapipeStreaming:
         color_frame         = aligned_frames.get_color_frame()
 
         # Continue if Error in Aligned Frames
-        if not aligned_depth_frame or not self.color_frame:
+        if not aligned_depth_frame or not color_frame:
           continue
 
         # Read Image
