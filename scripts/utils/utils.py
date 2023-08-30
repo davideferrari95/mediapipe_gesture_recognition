@@ -78,6 +78,7 @@ def save_model(path:str, file_name:str, model:LightningModule):
     # Append a Number to the File Name to Make it Unique
     counter += 1
     file_name = f'{file_name}_{counter}{file_extension}'
+    print(f'Model Name Already Exists. Saving as {file_name}')
 
   with open(os.path.join(path, file_name), 'wb') as FILE: torch.save(model.state_dict(), FILE)
   print(colored('\n\nModel Saved Correctly\n\n', 'green'))
