@@ -16,7 +16,7 @@ class Pointer:
         rospy.Subscriber("/mediapipe_gesture_recognition/left_hand", Hand, self.LeftHandCallback)
         rospy.Subscriber("/mediapipe_gesture_recognition/pose", Pose, self.PoseCallback)
 
-        self.area_pub = rospy.Publisher('area', Int32MultiArray, queue_size=1)
+        self.area_pub = rospy.Publisher('/multimodal_fusion/area', Int32MultiArray, queue_size=1)
 
         # TODO: publish all the items and areas on fusion node
 

@@ -39,7 +39,7 @@ class GestureRecognition3D:
     rospy.Subscriber('/mediapipe_gesture_recognition/face',       Face, self.FaceCallback)
 
     # Fusion Publisher
-    self.fusion_pub = rospy.Publisher('gesture', Int32MultiArray, queue_size=1)
+    self.fusion_pub = rospy.Publisher('/multimodal_fusion/gesture', Int32MultiArray, queue_size=1)
 
     # Read Mediapipe Modules Parameters
     self.enable_right_hand = rospy.get_param('mediapipe_gesture_recognition/enable_right_hand', False)
