@@ -1,7 +1,7 @@
 <launch>
 
     <!-- Webcam Args -->
-    <arg name="realsense" default="false"/>
+    <arg name="point_area" default="false"/>
 
     <!-- Recognition Precision Arg / Param -->
     <arg   name="recognition_precision_probability" default="0.8"/>
@@ -11,6 +11,6 @@
     <node pkg="mediapipe_gesture_recognition" type="recognition_node.py" name="mediapipe_3D_recognition_node" output="screen"/>
 
     <!-- Point-At Area - Raw Function Node -->
-    <node if="$(arg realsense)" pkg="mediapipe_gesture_recognition" type="3Dpoint_node_area.py" name="point_area_node" output="screen"/>
+    <node if="$(arg point_area)" pkg="mediapipe_gesture_recognition" type="3Dpoint_node_area.py" name="point_area_node" output="screen"/>
 
 </launch>

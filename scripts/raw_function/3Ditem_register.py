@@ -2,8 +2,26 @@
 
 import rospy, numpy as np
 from mediapipe_gesture_recognition.msg import Hand, Pose
-from Utils import Start_countdown
+# from Utils import Start_countdown
 import csv
+
+item_coordinates_file = r'/home/davide/ROS/ICRA_2023/src/Mediapipe/mediapipe_gesture_recognition - ICRA/scripts/raw_function/item_coordinates.csv'
+# Countdown Function
+def countdown(num_of_secs):
+
+  import rospy
+
+  print("\nAcquisition Starts in:")
+
+  # Wait Until 0 Seconds Remaining
+  while (not rospy.is_shutdown() and num_of_secs != 0):
+    m, s = divmod(num_of_secs, 60)
+    min_sec_format = '{:02d}:{:02d}'.format(m, s)
+    print(min_sec_format)
+    rospy.sleep(1)
+    num_of_secs -= 1
+
+  print("\nSTART\n")
 
 class ItemRegister:
 
@@ -81,7 +99,7 @@ class ItemRegister:
         coordinates = []
         item_found = False
 
-        with open('/home/alberto/catkin_ws/src/mediapipe_gesture_recognition/doc/item_coordinates.csv', 'r') as csv_file:
+        with open(item_coordinates_file, 'r') as csv_file:
             reader = csv.reader(csv_file, delimiter=',')
 
             for row in reader:
@@ -102,7 +120,7 @@ class ItemRegister:
                 coordinates.append(new_row)
                 print("The {} are now in x:{}, y:{}, z:{}".format(label, new_row[1], new_row[2], new_row[3]))
 
-        with open('/home/alberto/catkin_ws/src/mediapipe_gesture_recognition/doc/item_coordinates.csv', 'w', newline='') as csv_file:
+        with open(item_coordinates_file, 'w', newline='') as csv_file:
             writer = csv.writer(csv_file, delimiter=',')
 
             for row in coordinates:
@@ -114,7 +132,9 @@ if __name__ == '__main__':
 
     name_label = input("Inserisci il nome dell'oggetto/area di cui vuoi registrare le coordinate: ")
 
-    Start_countdown(8)
+    # Start_countdown(8)
+    # rospy.sleep(5)
+    countdown(5)
 
     item_coordinates = R.takeCoordinates()
 

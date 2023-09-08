@@ -4,6 +4,9 @@ import rospy, numpy as np
 from std_msgs.msg import Int32MultiArray
 from mediapipe_gesture_recognition.msg import Hand, Pose
 
+AREA_LEFT  = [1.9863376085967124, 11.333212738336327, -1]
+AREA_FRONT = [0.3513785342213139, 1.6137569721248104, -1]
+
 class Pointer:
 
     def __init__(self):
@@ -23,6 +26,7 @@ class Pointer:
         self.right_msg = None
         self.left_msg  = None
         self.pose_msg  = None
+        # self.Area_threshold = 1.8
         self.Area_threshold = 1.8
         self.Item_threshold = 0.2
         self.z = -2
@@ -86,8 +90,10 @@ class Pointer:
 
         p3_R = self.find_point_on_line(p1, p2)
 
-        Area1 = np.array([-1, -0.5, -2])
-        Area2 = np.array([3, 0.5, -2])
+        # Area1 = np.array([-1, -0.5, -2])
+        # Area2 = np.array([3, 0.5, -2])
+        Area1 = np.array(AREA_LEFT)
+        Area2 = np.array(AREA_FRONT)
 
         distancefromArea1 = np.linalg.norm(np.cross(p2-p1, p1 - Area1)) / np.linalg.norm(p2 - p1)
         distancefromArea2 = np.linalg.norm(np.cross(p2-p1, p2 - Area2)) / np.linalg.norm(p2-p1)
@@ -108,7 +114,7 @@ class Pointer:
         #     return areamsg.data
 
         if distancefromArea2 <= 2.2:
-            print("Stai indicando l'Area 1 con la destra")
+            print("Stai indicando l'Area FRONT con la destra")
             areamsg.data = [1]
             self.area_pub.publish(areamsg)
             return areamsg.data
@@ -161,7 +167,7 @@ class Pointer:
 
             # Stampa se il punto appartiene all'intorno della retta
             if distancefromArea1 <= self.Area_threshold:
-                print("Stai indicando l'Area 2 con la sinistra")
+                print("Stai indicando l'Area LEFT con la sinistra")
                 areamsg.data = [2]
                 self.area_pub.publish(areamsg)
                 return areamsg.data
