@@ -1,103 +1,60 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.5)
 project(mediapipe_gesture_recognition)
 
-## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++17)
+# Default to C99
+if(NOT CMAKE_C_STANDARD)
+  set(CMAKE_C_STANDARD 99)
+endif()
 
-## Find catkin macros and libraries
-find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  rospy
-  message_generation
-  std_msgs
-  sensor_msgs
-  image_transport
+# Default to C++17
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+# Find Dependencies
+find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
+find_package(rclpy REQUIRED)
+
+# Find Messages Dependencies
+find_package(std_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+
+# Find Messages Generation Dependencies
+find_package(rosidl_default_generators REQUIRED)
+
+# Find Other Dependencies
+find_package(image_transport REQUIRED)
+
+# Set Cusom Messages
+set(msg_files
+  "msg/Pose.msg"  
+  "msg/Keypoint.msg"
+  "msg/Hand.msg"
+  "msg/Face.msg"
+  "msg/Frame.msg"
+)
+# Generate Messages, Services and Actions
+rosidl_generate_interfaces(${PROJECT_NAME}
+  ${msg_files}
+  DEPENDENCIES std_msgs
 )
 
-################################################
-## Declare ROS messages, services and actions ##
-################################################
-
-## Generate messages in the 'msg' folder
-add_message_files(
-  FILES
-  Pose.msg  
-  Keypoint.msg
-  Hand.msg
-  Face.msg
-  Frame.msg
-)
-
-## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   VideoSequence.srv
-# )
-
-## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
-
-## Generate added messages and services with any dependencies listed here
-generate_messages(
-  DEPENDENCIES
-    std_msgs
-    ${PROJECT_NAME}
-)
-
-################################################
-## Declare ROS dynamic reconfigure parameters ##
-################################################
-
-## Generate dynamic reconfigure parameters in the 'cfg' folder
-# generate_dynamic_reconfigure_options(
-#   cfg/DynReconf1.cfg
-#   cfg/DynReconf2.cfg
-# )
-
-###################################
-## catkin specific configuration ##
-###################################
-
-catkin_package(
-  INCLUDE_DIRS
-    # include
-  CATKIN_DEPENDS
-    roscpp
-    rospy
-    std_msgs
-    message_runtime
-  # LIBRARIES
-  # DEPENDS system_lib
-)
-
-###########
-## Build ##
-###########
-
+# Include C++ Directories
 include_directories(
-  # include
-  ${catkin_INCLUDE_DIRS}
+  include
+  ${${PROJECT_NAME}_INCLUDE_DIRS}
 )
 
-## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/sk_tracking.cpp
-# )
+# Install Python Modules
+ament_python_install_package(${PROJECT_NAME})
 
-## Declare a C++ executable
-# add_executable(${PROJECT_NAME}_node src/sk_tracking_node.cpp)
-# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES})
-
-#############
-## Install ##
-#############
-
-install(PROGRAMS 
+# Install Python Scripts
+install(PROGRAMS
 
   # Streams Node
   scripts/stream_node.py
@@ -116,5 +73,26 @@ install(PROGRAMS
   # scripts/raw_function/point_node.py
   # scripts/raw_function/take_orientation.py
 
-  DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}
+  DESTINATION lib/${PROJECT_NAME}
 )
+
+# Install Launch Files
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME}/
+)
+
+# Install Config Files
+install(DIRECTORY
+  config
+  DESTINATION share/${PROJECT_NAME}
+)
+
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  #set(ament_cmake_copyright_FOUND TRUE)
+  #set(ament_cmake_cpplint_FOUND TRUE)
+  ament_lint_auto_find_test_dependencies()
+endif()
+
+ament_package()

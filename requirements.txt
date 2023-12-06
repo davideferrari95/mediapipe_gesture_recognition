@@ -9,9 +9,6 @@ termcolor>=2.3.0
 # Mediapipe
 mediapipe>=0.10.1
 
-# ROS
-rospkg>=1.5.0
-
 # Torch
 torch>=2.0.1
 torchaudio>=2.0.2

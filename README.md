@@ -1,63 +1,36 @@
-# mediapipe_gesture_recognition
+# Mediapipe Gesture Recognition
+
 Gesture Recognition with Google MediaPipe
 
-# Step to follow to use Mediapipe Gesture Recognition
+## Setup and Usage
 
-## Step 1: 
+### Convert Frames into Videos
 
-### Convert your frames into videos
+- run mediapipe_gesture_recognition/useful_scripts/Pro_converter.py setting:
 
-```
-run mediapipe_gesture_recognition/useful_scripts/Pro_converter.py setting:
-
-- root_path = your Gesture_frames folder
-- video_with_labels_path = your video folder 
-- data_file = your csv label total file path 
+        root_path = your Gesture_frames folder
+        video_with_labels_path = your video folder 
+        data_file = your csv label total file path 
 
 In your terminal:
 
-rosrun mediapipe_gesture_recognition Pro_converter.py
+    ros2 run mediapipe_gesture_recognition Pro_converter.py
 
-```
+### Get all Keypoints using MediaPipe API
 
-## Step 2: 
+- launch the video launch file with:
 
-### See all the video and get all the keypoints using mediapipe API
-```
-
-launch the video launch file with:
-
-roslaunch mediapipe_gesture_recognition video_node.launch
-
-```
-
-## Step 3: 
+        ros2 launch mediapipe_gesture_recognition video_node_launch.py
 
 
-### Train your Neural Network:
+### Train Neural Network
 
-```
-If you want TensorFlow NN, run mediapipe_gesture_recognition/scripts/tensorflow_videotraining_node.py, in your terminal:
+- Run PyTorch Training Node:
 
-rosrun mediapipe_gesture_recognition tensorflow_videotraining_node.py
+        ros2 run mediapipe_gesture_recognition pytorch_videotraining_node.py
 
-If you want Pytorch NN, run mediapipe_gesture_recognition/scripts/pytorch_videotraining_node.py, in your terminal:
+### Use Trained Model to Recognize Gestures in Real Time
 
-rosrun mediapipe_gesture_recognition pytorch_videotraining_node.py
+- Run PyTorch model:
 
-```
-
-## Step 4: 
-
-### Use your trained model to recognise your gesture: 
-
-```
-If you want to use Tensorflow model, run mediapipe_gesture_recognition/scripts/tensorflow_recognition_node.py, in your terminal:
-
-rosrun mediapipe_gesture_recognition tensorflow_recognition_node.py
-
-If you want to use Pytorch model, run mediapipe_gesture_recognition/scripts/pytorch_recognition_node.py, in your terminal:
-
-rosrun mediapipe_gesture_recognition pytorch_recognition_node.py
-
-```
+        ros2 run mediapipe_gesture_recognition pytorch_recognition_node.py
