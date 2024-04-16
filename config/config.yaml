@@ -24,6 +24,5 @@ profiler: false
 fast_dev_run: false
 
 hydra:
-  run:
-    dir: /home/davide/ROS/ICRA_2023/src/Mediapipe/mediapipe_gesture_recognition -
-      ICRA/data/outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    run:
+        dir: /home/davide/ROS/multimodal_fusion_ws/src/Mediapipe/mediapipe_gesture_recognition/data/outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}

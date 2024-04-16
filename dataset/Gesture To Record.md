@@ -1,7 +1,7 @@
 # Gesture To Record
 
 1. Start
-2. Stop → 1000 video
+2. Stop
 3. Handwave
 4. Resume
 5. Pause
@@ -9,7 +9,7 @@
 7. Disagree
 8. Repeat
 9. Undo
-10. Point to an Object → 1000 video
+10. Point to an Object
 11. Point to an Area
 12. I will Follow You
 13. Follow Me
@@ -17,7 +17,7 @@
 15. Watch Out
 16. Speed up
 17. Slow down
-18. Thumbs up → TO DO
+18. Thumbs up
 19. Thumbs down
 20. Give me an item
 21. Receive an item
@@ -25,7 +25,7 @@
 23. Come forward
 24. Move to the left
 25. Move to the right
-26. No Gesture → 1000 video
+26. No Gesture
 
 YouTube Channel to Follow to Record the Videos:
 

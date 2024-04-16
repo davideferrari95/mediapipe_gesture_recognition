@@ -1,28 +1,28 @@
 # Holistic Pipeline Config
 holistic:
 
-  static_image_mode:        False     # Whether to treat the input images as a batch of static and possibly unrelated images, or a video stream. See details in https://solutions.mediapipe.dev/holistic#static_image_mode.
-  model_complexity:         1         # Complexity of the pose landmark model: 0, 1 or 2. See details in https://solutions.mediapipe.dev/holistic#model_complexity.
-  smooth_landmarks:         True      # Whether to filter landmarks across different input images to reduce jitter. See details in https://solutions.mediapipe.dev/holistic#smooth_landmarks.
-  enable_segmentation:      False     # Whether to predict segmentation mask. See details in https://solutions.mediapipe.dev/holistic#enable_segmentation.
-  smooth_segmentation:      True      # Whether to filter segmentation across different input images to reduce jitter. See details in https://solutions.mediapipe.dev/holistic#smooth_segmentation.
-  refine_face_landmarks:    True      # Whether to further refine the landmark coordinates around the eyes and lips, and output additional landmarks around the irises. Default to False. See details in https://solutions.mediapipe.dev/holistic#refine_face_landmarks.
-  min_detection_confidence: 0.5       # Minimum confidence value ([0.0, 1.0]) for person detection to be considered successful. See details in https://solutions.mediapipe.dev/holistic#min_detection_confidence.
-  min_tracking_confidence:  0.5       # Minimum confidence value ([0.0, 1.0]) for the pose landmarks to be considered tracked successfully. See details in https://solutions.mediapipe.dev/holistic#min_tracking_confidence.
+    static_image_mode:        False     # Whether to treat the input images as a batch of static and possibly unrelated images, or a video stream. See details in https://solutions.mediapipe.dev/holistic#static_image_mode.
+    model_complexity:         1         # Complexity of the pose landmark model: 0, 1 or 2. See details in https://solutions.mediapipe.dev/holistic#model_complexity.
+    smooth_landmarks:         True      # Whether to filter landmarks across different input images to reduce jitter. See details in https://solutions.mediapipe.dev/holistic#smooth_landmarks.
+    enable_segmentation:      False     # Whether to predict segmentation mask. See details in https://solutions.mediapipe.dev/holistic#enable_segmentation.
+    smooth_segmentation:      True      # Whether to filter segmentation across different input images to reduce jitter. See details in https://solutions.mediapipe.dev/holistic#smooth_segmentation.
+    refine_face_landmarks:    True      # Whether to further refine the landmark coordinates around the eyes and lips, and output additional landmarks around the irises. Default to False. See details in https://solutions.mediapipe.dev/holistic#refine_face_landmarks.
+    min_detection_confidence: 0.5       # Minimum confidence value ([0.0, 1.0]) for person detection to be considered successful. See details in https://solutions.mediapipe.dev/holistic#min_detection_confidence.
+    min_tracking_confidence:  0.5       # Minimum confidence value ([0.0, 1.0]) for the pose landmarks to be considered tracked successfully. See details in https://solutions.mediapipe.dev/holistic#min_tracking_confidence.
 
 # Face Detection Pipeline Config
 face_detection:
 
-  min_detection_confidence: 0.5       # Minimum confidence value ([0.0, 1.0]) for face detection to be considered successful. See details in https://solutions.mediapipe.dev/face_detection#min_detection_confidence.
-  model_selection:          0         # 0 or 1. 0 to select a short-range model that works best for faces within 2 meters from the camera, and 1 for a full-range model best for faces within 5 meters. See details in https://solutions.mediapipe.dev/face_detection#model_selection.
+    min_detection_confidence: 0.5       # Minimum confidence value ([0.0, 1.0]) for face detection to be considered successful. See details in https://solutions.mediapipe.dev/face_detection#min_detection_confidence.
+    model_selection:          0         # 0 or 1. 0 to select a short-range model that works best for faces within 2 meters from the camera, and 1 for a full-range model best for faces within 5 meters. See details in https://solutions.mediapipe.dev/face_detection#model_selection.
 
 # Objectron Pipeline Config
 objectron:
 
-  static_image_mode:        False     # Whether to treat the input images as a batch of static and possibly unrelated images, or a video stream.
-  max_num_objects:          5         # Maximum number of objects to detect.
-  min_detection_confidence: 0.5       # Minimum confidence value ([0.0, 1.0]) for object detection to be considered successful.
-  min_tracking_confidence:  0.99      # Minimum confidence value ([0.0, 1.0]) for the box landmarks to be considered tracked successfully.
-  focal_length:             [1,1]     # Camera focal length (fx, fy), by default is defined in NDC space. To use focal length (fx_pixel, fy_pixel) in pixel space, users should provide image_size = (image_width, image_height) to enable conversions inside the API.
-  principal_point:          [0,0]     # Camera principal point (px, py), by default is defined in NDC space. To use principal point (px_pixel, py_pixel) in pixel space, users should provide image_size = (image_width, image_height) to enable conversions inside the API.
-  image_size:               None      # size (image_width, image_height) of the input image, ONLY needed when use focal_length and principal_point in pixel space.
+    static_image_mode:        False     # Whether to treat the input images as a batch of static and possibly unrelated images, or a video stream.
+    max_num_objects:          5         # Maximum number of objects to detect.
+    min_detection_confidence: 0.5       # Minimum confidence value ([0.0, 1.0]) for object detection to be considered successful.
+    min_tracking_confidence:  0.99      # Minimum confidence value ([0.0, 1.0]) for the box landmarks to be considered tracked successfully.
+    focal_length:             [1,1]     # Camera focal length (fx, fy), by default is defined in NDC space. To use focal length (fx_pixel, fy_pixel) in pixel space, users should provide image_size = (image_width, image_height) to enable conversions inside the API.
+    principal_point:          [0,0]     # Camera principal point (px, py), by default is defined in NDC space. To use principal point (px_pixel, py_pixel) in pixel space, users should provide image_size = (image_width, image_height) to enable conversions inside the API.
+    image_size:               None      # size (image_width, image_height) of the input image, ONLY needed when use focal_length and principal_point in pixel space.
