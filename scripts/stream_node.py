@@ -98,10 +98,10 @@ class MediapipeStreaming:
             # Open Video Webcam
             self.cap = cv2.VideoCapture(self.webcam)
 
-        # Check Webcam Availability
-        if self.cap is None or not self.cap.isOpened():
-            rospy.logerr(f'ERROR: Webcam {self.webcam} Not Available | Starting Default: 0')
-            self.cap = cv2.VideoCapture(0)
+            # Check Webcam Availability
+            if self.cap is None or not self.cap.isOpened():
+                rospy.logerr(f'ERROR: Webcam {self.webcam} Not Available | Starting Default: 0')
+                self.cap = cv2.VideoCapture(0)
 
         # Initialize Intel RealSense
         else: self.initRealSense()

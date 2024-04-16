@@ -1,14 +1,12 @@
 # mediapipe_gesture_recognition
 
-Gesture Recognition with Google MediaPipe
+3D Gesture Recognition with Google MediaPipe
 
 ## Dataset Creation
 
 ### Convert Frames into Videos
 
 - Run `dataset_converter.py`:
-
-    &nbsp;
 
         rosrun mediapipe_gesture_recognition Pro_converter.py
 
@@ -20,22 +18,20 @@ Gesture Recognition with Google MediaPipe
 
 - Launch `process_dataset_node.py`:
 
-    &nbsp;
-
         roslaunch mediapipe_gesture_recognition process_dataset_node.launch
 
-### Train Neural Network
+## Train Neural Network
 
 - Run `training_node.py`:
 
-    &nbsp;
-
         python ../training_node.py
 
-### Start Gesture Recognition
+## Start Gesture Recognition
+
+- Launch `stream_node.py`:
+
+        roslaunch mediapipe_gesture_recognition stream_node.launch realsense:=True
 
 - Launch `recognition_node.py`:
-
-    &nbsp;
 
         roslaunch mediapipe_gesture_recognition recognition_node.launch
