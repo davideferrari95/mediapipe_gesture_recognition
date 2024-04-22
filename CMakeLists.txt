@@ -106,10 +106,13 @@ install(PROGRAMS
     scripts/training_node.py
     scripts/recognition_node.py
 
-    # Utils
-    scripts/utils/dataset_converter.py
-    scripts/utils/process_dataset_node.py
-    scripts/utils/zero_padding_function.py
+    # Jester Dataset Utilities
+    scripts/dataset_utilities/jester_dataset/dataset_converter.py
+
+    # Dataset Utilities
+    scripts/dataset_utilities/process_dataset_node.py
+    scripts/dataset_utilities/video_register.py
+    scripts/dataset_utilities/utilities/zero_padding.py
 
     # Raw Functions
     scripts/raw_function/3Dpoint_node_area.py
