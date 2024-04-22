@@ -49,8 +49,8 @@ class MediapipeDatasetProcess:
 
         # Get Package Path - Get Dataset Folder
         self.package_path    = rospkg.RosPack().get_path('mediapipe_gesture_recognition')
-        self.DATASET_PATH    = os.path.join(self.package_path, r'dataset/Jester Dataset/Videos')
-        self.gesture_path    = os.path.join(self.package_path, 'data/3D_Gestures', self.gesture_enabled_folder)
+        self.DATASET_PATH    = os.path.join(self.package_path, r'dataset/Video')
+        self.gesture_path    = os.path.join(self.package_path, r'data/3D_Gestures', self.gesture_enabled_folder)
         self.checkpoint_file = os.path.join(self.gesture_path, 'Video Checkpoint.txt')
 
         # Create the Processed Gesture Data Folder
