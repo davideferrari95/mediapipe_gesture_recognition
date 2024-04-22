@@ -2,14 +2,17 @@
 
 import sys, os, signal, logging
 import pickle, numpy as np
-from typing import Union, Tuple
+from typing import Union, Tuple, Optional, List
 from termcolor import colored
 
 # Import PyTorch Lightning
-import torch, torch.nn as nn, torch.nn.functional as F
-from pytorch_lightning import Trainer, LightningModule, loggers as pl_loggers
+import torch, pytorch_lightning as pl
+from torchmetrics.classification import Accuracy
+from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.profilers import SimpleProfiler
 from pytorch_lightning.callbacks import EarlyStopping
+
+# Import PyTorch Lightning Utilities
 from torch.utils.data import Dataset, DataLoader, random_split
 from utils.utils import StartTrainingCallback, StartTestingCallback
 from utils.utils import set_hydra_absolute_path, save_parameters, save_model
@@ -50,7 +53,7 @@ def main(cfg: Params):
     train_dataloader, val_dataloader, test_dataloader = GRT.getDataloaders()
 
     # Create Trainer Module
-    trainer = Trainer(
+    trainer = pl.Trainer(
 
         # Devices
         devices = 'auto',
@@ -102,6 +105,8 @@ class GestureDataset(Dataset):
         # Convert Labels to Categorical Matrix (One-Hot Encoding)
         self.y: torch.Tensor = torch.nn.functional.one_hot(self.y)
 
+        print(colored('One-Hot Encoding:\n\n', 'yellow'), f'{self.y}\n')
+
         # Move to GPU
         self.x.to(DEVICE)
         self.y.to(DEVICE)
@@ -118,131 +123,169 @@ class GestureDataset(Dataset):
     def __getitem__(self, idx) -> Tuple[torch.Tensor, torch.Tensor]:
         return self.x[idx], self.y[idx]
 
-class NeuralClassifier(LightningModule):
+class NeuralClassifier(pl.LightningModule):
 
     """ Classifier Neural Network """
 
-    def __init__(self, input_shape, output_shape, optimizer='Adam', lr=0.0005, loss_function='cross_entropy'):
+    def __init__(self, input_shape, output_shape, optimizer='AdamW', lr=0.0005, loss_function='cross_entropy'):
 
         super(NeuralClassifier, self).__init__()
 
-        # print(f'\n\nInput Shape: {input_shape} | Output Shape: {output_shape}')
-        # print(f'Optimizer: {optimizer} | Learning Rate: {lr} | Loss Function: {loss_function}\n\n')
-
         # Compute Input and Output Sizes
-        self.input_size, self.output_size = input_shape[1], output_shape[0]
-        self.hidden_size, self.num_layers = 512, 1
+        self.input_size, self.num_classes = input_shape[1], output_shape[0]
+        self.hidden_size, self.num_layers = 512, 3
+
+        print(colored('Input Shape: ', 'yellow'), f'{input_shape} | ', colored('Output Shape: ', 'yellow'), output_shape)
+        print(colored('Input Size: ', 'yellow'), f'{self.input_size} | ', colored('Num Classes: ', 'yellow'), f'{self.num_classes} | ', colored('Hidden Size: ', 'yellow'), f'{self.hidden_size} | ', colored('Num Layers: ', 'yellow'), self.num_layers)
+        print(colored('Optimizer: ', 'yellow'), f'{optimizer} | ', colored('Learning Rate: ', 'yellow'), f'{lr} | ', colored('Loss Function: ', 'yellow'), f'{loss_function}\n\n')
 
         # Create LSTM Layers (Input Shape = Number of Flattened Keypoints (300 / 1734))
-        # self.lstm = nn.LSTM(input_size=self.input_size, hidden_size=self.hidden_size, num_layers=self.num_layers,
-        #                     batch_first=True, bidirectional=False).to(DEVICE)
-        #                     # batch_first=True, bidirectional=False, dropout=0.5).to(DEVICE)
+        self.lstm = torch.nn.LSTM(input_size=self.input_size, hidden_size=self.hidden_size, num_layers=self.num_layers,
+                            batch_first=True, bidirectional=False).to(DEVICE)
 
-        # # Create Fully Connected Layers
-        # self.fc_layers = nn.Sequential(
-        #   nn.ReLU(),
-        #   nn.Linear(self.hidden_size, 256),
-        #   nn.ReLU(),
-        #   # nn.Dropout(0.5),
-        #   nn.Linear(256, 128),
-        #   nn.ReLU(),
-        #   nn.Linear(128, self.output_size)
-        # ).to(DEVICE)
+        # Create Fully Connected Layers
+        self.net = self.mlp(self.hidden_size, self.num_classes, hidden_size=[256,128], hidden_mod=torch.nn.ReLU()).to(DEVICE)
 
-        # Create LSTM Layers -> Alberto Version
-        self.lstm1 = nn.LSTM(input_size=self.input_size, hidden_size=64, num_layers=1, batch_first=True, bidirectional=False)
-        self.lstm2 = nn.LSTM(input_size=64, hidden_size=128, num_layers=1, batch_first=True, bidirectional=False)
-        self.lstm3 = nn.LSTM(input_size=128, hidden_size=64, num_layers=1, batch_first=True, bidirectional=False)
-        self.fc1 = nn.Linear(64, 128)
-        self.fc2 = nn.Linear(128, self.output_size)
+        # Initialize Accuracy Metrics
+        self.train_accuracy, self.test_accuracy, self.val_accuracy = Accuracy(task="multiclass", num_classes=self.num_classes), Accuracy(task="multiclass", num_classes=self.num_classes), Accuracy(task="multiclass", num_classes=self.num_classes)
 
         # Instantiate Loss Function and Optimizer
         self.loss_function = getattr(torch.nn.functional, loss_function)
         self.optimizer     = getattr(torch.optim, optimizer)
         self.learning_rate = lr
 
-    # def forward(self, x:torch.Tensor) -> torch.Tensor:
+        # Initialize Validation and Test Losses
+        self.val_loss,   self.num_val_batches  = 0, 0
+        self.test_loss,  self.num_test_batches = 0, 0
 
-    #     # Hidden State and Internal State
-    #     h_0 = torch.autograd.Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_size)).to(DEVICE)
-    #     c_0 = torch.autograd.Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_size)).to(DEVICE)
+        print(colored(f'Model Initialized:\n\n', 'green'), self, '\n')
 
-    #     # Propagate Input through LSTM
-    #     output, (hn, cn) = self.lstm(x, (h_0, c_0))
+        # exit()
 
-    #     # Reshaping Data for the Fully Connected Layers
-    #     hn = hn.view(-1, self.hidden_size)
+    # Neural Network Creation Function
+    def mlp(self, input_size:int, output_size:int, hidden_size:Optional[List[int]]=[512,256], hidden_mod:Optional[torch.nn.Module]=torch.nn.ReLU(), output_mod:Optional[torch.nn.Module]=None):
 
-    #     # Forward Pass through Fully Connected Layers
-    #     out = self.fc_layers(hn)
+        ''' Neural Network Creation Function '''
 
-    #     # Softmax for Classification
-    #     out = F.softmax(out, dim=1)
+        # No Hidden Layers
+        if hidden_size is None or hidden_size == []:
 
-    #     return out
+            # Only one Linear Layer
+            net = [torch.nn.Linear(input_size, output_size)]
 
-    def forward(self, x):
+        else:
 
-        x, _ = self.lstm1(x)
-        x = F.relu(x)
-        x = F.dropout(x, p=0.5)
+            # First Layer with ReLU Activation
+            net = [torch.nn.Linear(input_size, hidden_size[0]), hidden_mod]
 
-        x, _ = self.lstm2(x)
-        x = F.relu(x)
-        x = F.dropout(x, p=0.5)
+            # Add the Hidden Layers
+            for i in range(len(hidden_size) - 1):
+                net += [torch.nn.Linear(hidden_size[i], hidden_size[i+1]), hidden_mod]
 
-        x, _ = self.lstm3(x)
-        x = F.relu(x)
-        x = F.dropout(x, p=0.5)
+            # Add the Output Layer
+            net.append(torch.nn.Linear(hidden_size[-1], output_size))
 
-        # Select only the last output from the LSTM
-        x = x[:, -1, :]
+        if output_mod is not None:
+            net.append(output_mod)
 
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = F.dropout(x, p=0.5)
+        # Create a Sequential Neural Network
+        return torch.nn.Sequential(*net)
 
-        x = self.fc2(x)
+    def forward(self, x:torch.Tensor):
 
-        return x
+        """ Forward Pass """
 
-    def configure_optimizers(self):
+        # Pass through LSTM Layer
+        lstm_out, _ = self.lstm(x)
+        lstm_out = torch.nn.functional.relu(lstm_out)
+        lstm_out = torch.nn.functional.dropout(lstm_out, p=0.5)
 
-        # Return Optimizer
-        return self.optimizer(self.parameters(), lr = self.learning_rate)
+        # Only Last Time Step Output
+        return self.net(lstm_out[:, -1, :])
 
-    def compute_loss(self, batch:Tuple[torch.Tensor, torch.Tensor], log_name:str) -> torch.Tensor:
+    def compute_loss(self, batch:Tuple[torch.Tensor, torch.Tensor], log_name:str) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+
+        """ Compute Loss """
 
         # Get X,Y from Batch
         x, y = batch
 
         # Forward Pass
-        y_pred = self(x)
+        y_pred:torch.Tensor = self(x)
 
         # Compute Loss
-        loss = self.loss_function(y_pred, y.float())
+        loss:torch.Tensor = self.loss_function(y_pred, y.float())
         self.log(log_name, loss)
 
-        # TODO: Compute Accuracy
-        # acc = self.accuracy(y_pred, y)
-        # self.log("train_acc", acc, prog_bar= True, on_step=True, on_epoch=False)
+        return loss, y_pred, y
+
+    def training_step(self, batch:Tuple[torch.Tensor, torch.Tensor], batch_idx):
+
+        """ Training Step """
+
+        # Compute Loss
+        loss, y_pred, y = self.compute_loss(batch, 'train_loss')
+
+        # Update Accuracy Metric
+        self.train_accuracy(y_pred, y)
+        self.log('train_accuracy', self.train_accuracy, prog_bar=True)
 
         return loss
 
-    def training_step(self, batch, batch_idx):
+    def validation_step(self, batch:Tuple[torch.Tensor, torch.Tensor], batch_idx):
 
-        loss = self.compute_loss(batch, 'train_loss')
-        return {'loss': loss}
+        """ Validation Step """
 
-    def validation_step(self, batch, batch_idx):
+        # Compute Loss
+        val_loss, y_pred, y = self.compute_loss(batch, 'val_loss')
 
-        loss = self.compute_loss(batch, 'val_loss')
-        return {'val_loss': loss}
+        # Update Accuracy Metric
+        self.val_accuracy(y_pred, y)
 
-    def test_step(self, batch, batch_idx):
+        # Update Validation Loss
+        self.val_loss += val_loss.item()
+        self.num_val_batches += 1
+        return val_loss
 
-        loss = self.compute_loss(batch, 'test_loss')
-        return {'test_loss': loss}
+    def on_validation_epoch_end(self):
+
+        """ Validation Epoch End """
+
+        # Calculate Average Validation Loss
+        avg_val_loss = self.val_loss / self.num_val_batches
+        self.log('val_loss', avg_val_loss)
+        self.log('val_accuracy', self.val_accuracy.compute(), prog_bar=True)
+
+    def test_step(self, batch:Tuple[torch.Tensor, torch.Tensor], batch_idx):
+
+        """ Test Step """
+
+        # Compute Loss
+        test_loss, y_pred, y = self.compute_loss(batch, 'test_loss')
+
+        # Update Accuracy Metric
+        self.test_accuracy(y_pred, y)
+
+        # Update Test Loss
+        self.test_loss += test_loss.item()
+        self.num_test_batches += 1
+        return test_loss
+
+    def on_test_epoch_end(self):
+
+        """ Test Epoch End """
+
+        # Calculate Average Test Loss
+        avg_test_loss = self.test_loss / self.num_test_batches
+        self.log('test_loss', avg_test_loss)
+        self.log('test_accuracy', self.test_accuracy.compute(), prog_bar=True)
+
+    def configure_optimizers(self):
+
+        """ Configure Optimizer """
+
+        # Return Optimizer
+        return self.optimizer(self.parameters(), lr = self.learning_rate)
 
 class GestureRecognitionTraining3D:
 
@@ -256,7 +299,7 @@ class GestureRecognitionTraining3D:
         if cfg.enable_left_hand:  gesture_file += 'Left'
         if cfg.enable_pose:       gesture_file += 'Pose'
         if cfg.enable_face:       gesture_file += 'Face'
-        print(colored(f'\n\nLoading: {gesture_file} Configuration', 'yellow'))
+        print(colored(f'\n\nLoading: {gesture_file} Configuration\n', 'yellow'))
 
         # Get Database and Model Path
         database_path   = os.path.join(FOLDER, f'database/{gesture_file}/Gestures/')
@@ -309,8 +352,6 @@ class GestureRecognitionTraining3D:
 
         # Get Input and Output Sizes from Dataset Shapes
         input_size, output_size = torch.Size(list(dataset_shape[0])[1:]), torch.Size(list(dataset_shape[1])[1:])
-        # print(f'\n\nInput Shape: {dataset_shape[0]} | Output Shape: {dataset_shape[1]}')
-        # print(f'Input Size: {input_size} | Output Size: {output_size}')
 
         # Save Model Parameters
         save_parameters(model_path, 'model_parameters.yaml', input_size=list(input_size), output_size=list(output_size), optimizer=optimizer, lr=lr, loss_function=loss_function)
@@ -319,7 +360,7 @@ class GestureRecognitionTraining3D:
         self.model = NeuralClassifier(input_size, output_size, optimizer, lr, loss_function)
         self.model.to(torch.device("cuda:0" if torch.cuda.is_available() else "cpu"))
 
-    def getModel(self) -> Tuple[LightningModule, str]:
+    def getModel(self) -> Tuple[pl.LightningModule, str]:
 
         """ Get NN Model and Model Path """
 
@@ -369,9 +410,9 @@ class GestureRecognitionTraining3D:
                 gesture_sequences = sequence if 'gesture_sequences' not in locals() else np.concatenate((gesture_sequences, sequence), axis=0)
 
                 # Debug Print | Shape: (Number of Sequences / Videos, Sequence Length, Number of Keypoints (Flattened Array of 3D Coordinates x,y,z,v))
-                print(f'Processing: "{gesture}"'.ljust(30), f'| Sequence Shape: {sequence.shape}'.ljust(30), f'| Label: "{gesture_name}"')
+                print(f'Processing: "{gesture}"'.ljust(30), f'| Sequence Shape: {sequence.shape}'.ljust(30), f'| Label: {labels[-1]} | Gesture: "{gesture_name}"')
 
-        print(colored(f'\n\nTotal Sequences Shape: ', 'yellow'), f'{gesture_sequences.shape} | ', colored('Total Labels Shape: ', 'yellow'), f'{labels.shape}\n\n')
+        print(colored(f'\nTotal Sequences Shape: ', 'yellow'), f'{gesture_sequences.shape} | ', colored('Total Labels Shape: ', 'yellow'), f'{labels.shape}\n\n')
         return gesture_sequences, labels
 
 if __name__ == '__main__':
