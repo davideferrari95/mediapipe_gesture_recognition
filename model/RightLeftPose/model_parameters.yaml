@@ -3,6 +3,6 @@ input_size:
 - 300
 output_size:
 - 4
-optimizer: Adam
-lr: 0.0005
+optimizer: AdamW
+lr: 0.0001
 loss_function: cross_entropy
