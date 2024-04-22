@@ -3,7 +3,7 @@
 import rospy, rospkg, os
 import torch, numpy as np
 from tqdm import tqdm
-from typing import List, Union
+from typing import Union
 from termcolor import colored
 
 # Import Neural Network and Model
@@ -26,8 +26,7 @@ class GestureRecognition3D:
 
         # ROS Initialization
         rospy.init_node('mediapipe_gesture_recognition_node', anonymous=True)
-        # TODO: why 20 FPS ?
-        self.rate = rospy.Rate(20)
+        self.rate = rospy.Rate(30)
 
         # Initialize Keypoint Messages
         self.initKeypointMessages()

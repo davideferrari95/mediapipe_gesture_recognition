@@ -436,7 +436,6 @@ class MediapipeStreaming:
             # Compute FPS
             fps = int(1 / (rospy.Time.now() - start_time).to_sec())
 
-            # TODO: Check if Works even with RealSense
             if not self.realsense:
 
                 # To Draw the Annotations -> Set the Image Writable
