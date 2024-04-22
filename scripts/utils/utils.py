@@ -1,25 +1,9 @@
 import os, shutil, yaml, torch
 from pytorch_lightning import LightningModule
+from termcolor import colored
 
 # Get Torch Device ('cuda' or 'cpu')
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-# Countdown Function
-def countdown(num_of_secs):
-
-    import rospy
-
-    print("\nAcquisition Starts in:")
-
-    # Wait Until 0 Seconds Remaining
-    while (not rospy.is_shutdown() and num_of_secs != 0):
-        m, s = divmod(num_of_secs, 60)
-        min_sec_format = '{:02d}:{:02d}'.format(m, s)
-        print(min_sec_format)
-        rospy.sleep(1)
-        num_of_secs -= 1
-
-    print("\nSTART\n")
 
 # Project Folder (ROOT Project Location)
 FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__),"../.."))
@@ -109,39 +93,3 @@ def handle_signal(signal, frame):
     delete_pycache_folders()
     print("Done\n")
     exit(0)
-
-from pytorch_lightning.callbacks import Callback
-from termcolor import colored
-
-# Print Start Training Info Callback
-class StartTrainingCallback(Callback):
-
-    # On Start Training
-    def on_train_start(self, trainer, pl_module):
-        print(colored('\n\nStart Training Process\n\n','yellow'))
-
-    # On End Training
-    def on_train_end(self, trainer, pl_module):
-        print(colored('\n\nTraining Done\n\n','yellow'))
-
-# Print Start Validation Info Callback
-class StartValidationCallback(Callback):
-
-    # On Start Validation
-    def on_validation_start(self, trainer, pl_module):
-        print(colored('\n\n\nStart Validation Process\n\n','yellow'))
-
-    # On End Validation
-    def on_validation_end(self, trainer, pl_module):
-        print(colored('\n\n\n\nValidation Done\n\n','yellow'))
-
-# Print Start Testing Info Callback
-class StartTestingCallback(Callback):
-
-    # On Start Testing
-    def on_test_start(self, trainer, pl_module):
-        print(colored('\n\nStart Testing Process\n\n','yellow'))
-
-    # On End Testing
-    def on_test_end(self, trainer, pl_module):
-        print(colored('\n\n\nTesting Done\n\n','yellow'))

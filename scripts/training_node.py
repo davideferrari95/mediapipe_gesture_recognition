@@ -14,7 +14,7 @@ from pytorch_lightning.callbacks import EarlyStopping
 
 # Import PyTorch Lightning Utilities
 from torch.utils.data import Dataset, DataLoader, random_split
-from utils.utils import StartTrainingCallback, StartTestingCallback
+from utils.lightning_utilities import StartTrainingCallback, StartTestingCallback
 from utils.utils import set_hydra_absolute_path, save_parameters, save_model
 
 # Ignore Torch Compiler INFO
