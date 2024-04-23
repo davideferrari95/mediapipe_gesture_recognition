@@ -291,18 +291,38 @@ class GestureRecognitionTraining3D:
 
     """ 3D Gesture Recognition Training Class """
 
+    """ Dataset:
+
+    1 Pickle File (.pkl) for each Gesture
+    Each Pickle File contains a Number of Videos Representing the Gesture
+    Each Video is Represented by a Sequence of 3D Keypoints (x,y,z,v) for each Frame of the Video
+
+    Dataset Structure:
+
+        - Array of Sequences (Videos): (Number of Sequences / Videos, Sequence Length, Number of Keypoints (Flattened Array of 3D Coordinates x,y,z,v))
+        - Size: (N Video, N Frames, N Keypoints) -> (1000+, 85, 300) or (1000+, 85, 2212)
+
+        Frames: 85 (Fixed) | Keypoints (300 or 2212):
+
+        Right Hand: 21 * 4 = 84
+        Left  Hand: 21 * 4 = 84
+        Pose:       33 * 4 = 132
+        Face:       478 * 3 = 1912
+
+    """
+
     def __init__(self, cfg:Params):
 
         # Choose Gesture File
-        gesture_file = ''
-        if cfg.enable_right_hand: gesture_file += 'Right'
-        if cfg.enable_left_hand:  gesture_file += 'Left'
-        if cfg.enable_pose:       gesture_file += 'Pose'
-        if cfg.enable_face:       gesture_file += 'Face'
-        print(colored(f'\n\nLoading: {gesture_file} Configuration\n', 'yellow'))
+        gesture_file, self.keypoint_number = '', 0
+        if cfg.enable_right_hand: gesture_file += 'Right'; self.keypoint_number += 84
+        if cfg.enable_left_hand:  gesture_file += 'Left';  self.keypoint_number += 84
+        if cfg.enable_pose:       gesture_file += 'Pose';  self.keypoint_number += 132
+        if cfg.enable_face:       gesture_file += 'Face';  self.keypoint_number += 1912
+        print(colored(f'\n\nLoading: {gesture_file} Configuration\n', 'yellow'), f' | Keypoint Number: {self.keypoint_number}')
 
         # Get Database and Model Path
-        database_path   = os.path.join(FOLDER, f'database/{gesture_file}/Gestures/')
+        database_path   = os.path.join(FOLDER, f'data/3D_Gestures/{gesture_file}')
         self.model_path = os.path.join(FOLDER, f'model/{gesture_file}')
 
         # Prepare Dataloaders
@@ -369,26 +389,6 @@ class GestureRecognitionTraining3D:
     def processGestures(self, database_path:str, gestures:np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
 
         """ Process Gestures Dataset """
-
-        """ Dataset:
-
-        1 Pickle File (.pkl) for each Gesture
-        Each Pickle File contains a Number of Videos Representing the Gesture
-        Each Video is Represented by a Sequence of 3D Keypoints (x,y,z) for each Frame of the Video
-
-        Dataset Structure:
-
-            - Array of Sequences (Videos): (Number of Sequences / Videos, Sequence Length, Number of Keypoints (Flattened Array of 3D Coordinates x,y,z,v))
-            - Size: (N Video, N Frames, N Keypoints) -> (1000+, 85, 300) or (1000+, 85, 1734)
-
-            Frames: 85 (Fixed) | Keypoints (300 or 1734):
-
-            Right Hand: 21 * 4 = 84
-            Left  Hand: 21 * 4 = 84
-            Pose:       33 * 4 = 132
-            Face:       478 * 3 = 1434
-
-        """
 
         # Loop Over Gestures
         for index, gesture in enumerate(sorted(gestures)):

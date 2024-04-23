@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
-import os, cv2, pickle
+import os, time, cv2, pickle
 import rospy, rospkg
 import numpy as np
 from termcolor import colored
 from natsort import natsorted
+from tqdm import tqdm
 
 # Import Mediapipe
 import mediapipe
@@ -14,6 +15,26 @@ from mediapipe_gesture_recognition.msg import Keypoint, Hand, Pose, Face
 from utilities.zero_padding import ZeroPadding
 
 class MediapipeDatasetProcess:
+
+    """ Dataset:
+
+    1 Pickle File (.pkl) for each Gesture
+    Each Pickle File contains a Number of Videos Representing the Gesture
+    Each Video is Represented by a Sequence of 3D Keypoints (x,y,z,v) for each Frame of the Video
+
+    Dataset Structure:
+
+        - Array of Sequences (Videos): (Number of Sequences / Videos, Sequence Length, Number of Keypoints (Flattened Array of 3D Coordinates x,y,z,v))
+        - Size: (N Video, N Frames, N Keypoints) -> (1000+, 85, 300) or (1000+, 85, 2212)
+
+        Frames: 85 (Fixed) | Keypoints (300 or 2212):
+
+        Right Hand: 21 * 4  = 84
+        Left  Hand: 21 * 4  = 84
+        Pose:       33 * 4  = 132
+        Face:       478 * 4 = 1912
+
+    """
 
     # Constants
     RIGHT_HAND, LEFT_HAND = True, False
@@ -45,12 +66,12 @@ class MediapipeDatasetProcess:
         self.enable_face       = rospy.get_param('enable_face', False)
         self.debug             = rospy.get_param('debug', False)
 
-        # Select Gesture File
-        self.gesture_enabled_folder = ''
-        if self.enable_right_hand: self.gesture_enabled_folder += 'Right'
-        if self.enable_left_hand:  self.gesture_enabled_folder += 'Left'
-        if self.enable_pose:       self.gesture_enabled_folder += 'Pose'
-        if self.enable_face:       self.gesture_enabled_folder += 'Face'
+        # Select Gesture File - Compute KeyPoints Number
+        self.gesture_enabled_folder, self.keypoint_number = '', 0
+        if self.enable_right_hand: self.gesture_enabled_folder += 'Right'; self.keypoint_number += 84
+        if self.enable_left_hand:  self.gesture_enabled_folder += 'Left';  self.keypoint_number += 84
+        if self.enable_pose:       self.gesture_enabled_folder += 'Pose';  self.keypoint_number += 132
+        if self.enable_face:       self.gesture_enabled_folder += 'Face';  self.keypoint_number += 1912
 
         # Get Package Path - Get Dataset Folder
         self.package_path    = rospkg.RosPack().get_path('mediapipe_gesture_recognition')
@@ -79,6 +100,7 @@ class MediapipeDatasetProcess:
 
         # Initialize Mediapipe Holistic
         self.holistic = self.mp_holistic.Holistic(refine_face_landmarks=True, min_detection_confidence=0.5, min_tracking_confidence=0.5)
+        time.sleep(1)
 
     def newKeypoint(self, landmark, number, name):
 
@@ -181,6 +203,7 @@ class MediapipeDatasetProcess:
                 new_keypoint.x = faceResults.face_landmarks.landmark[i].x
                 new_keypoint.y = faceResults.face_landmarks.landmark[i].y
                 new_keypoint.z = faceResults.face_landmarks.landmark[i].z
+                new_keypoint.v = 0
 
                 # Assign Keypoint Number
                 new_keypoint.keypoint_number = i
@@ -205,7 +228,7 @@ class MediapipeDatasetProcess:
         pose    = np.zeros(33 * 4)  if pose_msg  is None else np.array([[res.x, res.y, res.z, res.v] for res in pose_msg.keypoints]).flatten()
         left_h  = np.zeros(21 * 4)  if left_msg  is None else np.array([[res.x, res.y, res.z, res.v] for res in left_msg.keypoints]).flatten()
         right_h = np.zeros(21 * 4)  if right_msg is None else np.array([[res.x, res.y, res.z, res.v] for res in right_msg.keypoints]).flatten()
-        face    = np.zeros(478 * 3) if face_msg  is None else np.array([[res.x, res.y, res.z, res.v] for res in face_msg.keypoints]).flatten()
+        face    = np.zeros(478 * 4) if face_msg  is None else np.array([[res.x, res.y, res.z, res.v] for res in face_msg.keypoints]).flatten()
 
         # Concatenate Data
         return np.concatenate([right_h, left_h, pose, face])
@@ -269,11 +292,10 @@ class MediapipeDatasetProcess:
 
             # Load the Last Gesture Name
             last_gesture = str(lines[0].split(",")[0])
-            last_video = str(lines[0].split(",")[1])
-            # last_video = str(lines[0].split(",")[1]) + ".avi"
+            last_video = int(str(lines[0].split(",")[1])) if str(lines[0].split(",")[1]) != '' else 0
 
         if last_gesture == '': print(colored('\nStarting Dataset Processing\n', 'green'))
-        else: print(colored('\nResuming Dataset Processing', 'green'), f' | Gesture: {last_gesture} | Video: {last_video}\n')
+        else: print(colored('\nResuming Dataset Processing', 'green'), f' | Gesture: "{last_gesture}" | Video: {last_video}\n')
 
         try:
 
@@ -283,11 +305,18 @@ class MediapipeDatasetProcess:
                 # Ignore Already Processed Gestures
                 if folder >= last_gesture:
 
+                    # TQDM Progress Bar
+                    progress_bar = tqdm(total=len(os.listdir(os.path.join(self.DATASET_PATH, folder))), position=0, leave=True)
+
                     # Read Every Video in the Gesture Folder
                     for video in natsorted(os.listdir(os.path.join(self.DATASET_PATH, folder))):
 
+                        # Update Progress Bar
+                        progress_bar.set_description(f'Folder: {os.path.splitext(folder)[0]} | Video: {video}')
+                        progress_bar.update(1)
+
                         # Ignore Already Processed Videos
-                        if video.split(".")[0] >= last_video:
+                        if int(video.split(".")[0]) >= int(last_video):
 
                             # Get the Full Path of the Video for Each Gesture
                             video_path = os.path.join(self.DATASET_PATH, folder, video)
@@ -306,12 +335,13 @@ class MediapipeDatasetProcess:
                             # Save the Processed Video
                             self.saveProcessedVideo(self.gesture_name, video_sequence)
 
-                            # Print Finish of the Video
-                            print(f'Folder: {self.gesture_name:10} | Video: {video:8} | Sequence Shape: {video_sequence.shape} | Processed and Saved')
-
                         # Traceback - Update Checkpoint
                         with open(self.checkpoint_file, 'w') as f:
                             f.write(str(folder)+ "," + str(os.path.splitext(video)[0]))
+
+                    # Print Finish of the Gesture Folder
+                    progress_bar.close()
+                    print(colored(f'\nGesture: "{self.gesture_name}"', 'green'), ' | All Video Processed and Saved\n')
 
                     # Reset Last Video (Otherwise also Next Gesture Folder starts from `last_video`)
                     last_video = ''
@@ -324,7 +354,7 @@ class MediapipeDatasetProcess:
 
             # Zero Padding - Create Zero-Padded Sequences
             print(colored('Zero Padding the Sequences\n', 'green'))
-            ZeroPadding(self.gesture_path, overwrite=False)
+            ZeroPadding(self.gesture_path, self.keypoint_number, overwrite=True)
             print(colored('Zero Padding Completed\n', 'green'))
 
         # Ctrl+C -> Stop the Video Flow

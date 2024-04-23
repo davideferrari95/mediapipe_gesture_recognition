@@ -5,7 +5,7 @@ from termcolor import colored
 
 class ZeroPadding:
 
-    def __init__(self, dataset_path:str, overwrite:bool=False):
+    def __init__(self, dataset_path:str, keypoint_number:int=300, overwrite:bool=False):
 
         # Dataset .pkl Files Path
         self.dataset_path = dataset_path
@@ -14,7 +14,7 @@ class ZeroPadding:
         self.max_frames = self.get_max_frames()
 
         # Zero-Padding
-        self.zeroPadding(overwrite=overwrite)
+        self.zeroPadding(keypoint_number, overwrite)
 
     def get_max_frames(self):
 
@@ -42,13 +42,13 @@ class ZeroPadding:
 
     @staticmethod
     @njit
-    def zero_padding(array, max_shape):
+    def zero_padding(array, max_shape, keypoint_number:int=300):
 
-        padded_sequence = np.zeros((int(max_shape), 300))
+        padded_sequence = np.zeros((int(max_shape), keypoint_number))
         padded_sequence[:array.shape[0], :array.shape[-1]] = array
         return padded_sequence
 
-    def zeroPadding(self, overwrite:bool=False):
+    def zeroPadding(self, keypoint_number:int=300, overwrite:bool=False):
 
         """ Zero-Padding the Video Sequences """
 
@@ -60,12 +60,12 @@ class ZeroPadding:
 
                 # Get the Gesture Sequence
                 sequence = pickle.load(f)
-                video_sequence = np.zeros((len(sequence), int(self.max_frames), 300))
+                video_sequence = np.zeros((len(sequence), int(self.max_frames), keypoint_number))
 
                 # Loop Over the Sequence
                 for i in range(len(sequence)):
 
-                    padded_sequence = self.zero_padding(sequence[i], self.max_frames)
+                    padded_sequence = self.zero_padding(sequence[i], self.max_frames, keypoint_number)
                     video_sequence[i] = padded_sequence
 
                     print(f'Processing: {gesture} | Shape: {video_sequence.shape}')
