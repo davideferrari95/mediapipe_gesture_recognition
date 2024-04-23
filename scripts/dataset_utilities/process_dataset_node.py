@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import os, cv2, pickle
-import rospy, rospkg 
+import rospy, rospkg
 import numpy as np
 from termcolor import colored
 
