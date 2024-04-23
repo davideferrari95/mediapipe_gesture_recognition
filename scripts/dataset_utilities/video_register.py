@@ -1,108 +1,125 @@
-import os
-import cv2
-import time, rospy
+import os, cv2, time, rospy
+from termcolor import colored
 
-# Countdown Function
-def start_countdown(num_of_secs):
+# Package Path
+PACKAGE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),"../.."))
 
-    print("\nAcquisition Starts in:")
+class VideoRecorder:
 
-    # Wait Until 0 Seconds Remaining
-    while (not rospy.is_shutdown() and num_of_secs != 0):
-        m, s = divmod(num_of_secs, 60)
-        min_sec_format = '{:02d}:{:02d}'.format(m, s)
-        print(min_sec_format)
-        rospy.sleep(1)
-        num_of_secs -= 1
+    """ Video Recorder Class - Dataset Videos """
 
-    print("\nSTART\n")
+    """ Important! If you record in a low-light environment, the camera's frame rate drops, and you will have messed up shapes. """
 
-def rest_countdown(num_of_secs):
+    """ Get Webcam Number: v4l2-ctl --list-devices """
 
+    # Registration Settings
+    video_duration, pause, video_format = 3, 3, '.avi'
+    video_path = os.path.join(PACKAGE_PATH, 'dataset/Video')
+    webcam_number = 0
 
-    # Wait Until 0 Seconds Remaining
-    while (not rospy.is_shutdown() and num_of_secs != 0):
-        m, s = divmod(num_of_secs, 60)
-        min_sec_format = '{:02d}:{:02d}'.format(m, s)
-        print(min_sec_format)
-        rospy.sleep(1)
-        num_of_secs -= 1
+    def __init__(self):
 
+        # Number of Videos to Record
+        num_videos = int(input('\nInsert the number of videos you want to record: '))
 
-# Input del numero di video da registrare
-num_videos = int(input("Inserisci il numero di video che vuoi registrare: "))
+        # Available Gestures List
+        gestures = ['Stop', 'No Gesture', 'Point at', 'Thumb Up', 'Move Forward', 'Move Right', 'Move Left', 'Move Backward', 'Resume', 'Pause']
 
-#Inserisci il tipo di video che vuoi registrare
+        # Print Available Gestures
+        print(colored('\nAvailable Gestures:\n', 'green'))
+        for i, gesture in enumerate(gestures, start=1):
+            print(f'{i}. {gesture}')
 
-# gesture_type_to_add = "Stop"
-# gesture_type_to_add = "No Gesture"
-# gesture_type_to_add = "Point at"
-# gesture_type_to_add = "Thumb Up"
-# gesture_type_to_add = "Move Forward"
-# gesture_type_to_add = "Move Right"
-# gesture_type_to_add = "Move Left"
-# gesture_type_to_add = "Move Backward"
-gesture_type_to_add = "Resume"
-# gesture_type_to_add = "Pause"
+        # Ask for the Gesture to Record
+        while True:
 
-'''
-Importante: Se sei in un ambiente con un illuminazione di merda si abbassa il framerate della videocamera e quando processi i video hai le shape sminchiate
-  v4l2-ctl --list-devices
+            try:
 
-'''
+                # Selected Gesture Index
+                selected_index = int(input('\nInsert the number of the gesture to record: '))
 
-#Impostazioni della registrazione video
+                # Check if the Selected Index is Valid
+                if 1 <= selected_index <= len(gestures): selected_gesture = gestures[selected_index - 1]; break
+                else: print('Insert a valid number corresponding to a gesture in the list.')
 
+            except ValueError: print('Insert a valid number.')
 
-video_duration = 3  
-pause = 3    #Pausa tra i video in secondi
-video_path = "/home/alberto/catkin_ws/src/mediapipe_gesture_recognition/dataset/Video"  
-gesture_video_path = os.path.join(video_path, gesture_type_to_add)
-video_format = ".avi"
-# Controllo se la cartella esiste
-if not os.path.exists(gesture_video_path):
-    os.makedirs(gesture_video_path)
-# Ottenimento del numero del video più alto nella cartella
-existing_videos = [f for f in os.listdir(gesture_video_path) if f.endswith(video_format)]
-if existing_videos:
-    latest_video = max([int(f.split(".")[0]) for f in existing_videos])
-else:
-    latest_video = 0
-print("I'm recording the gesture '{}' ".format(gesture_type_to_add))
-Start_countdown(3)
+        # Check if the Gesture Folder Exists
+        if not os.path.exists(os.path.join(self.video_path, selected_gesture)): os.makedirs(os.path.join(self.video_path, selected_gesture))
 
+        # Get the Highest Video Number in the Folder
+        existing_videos = [f for f in os.listdir(os.path.join(self.video_path, selected_gesture)) if f.endswith(self.video_format)]
+        latest_video = max([int(f.split(".")[0]) for f in existing_videos]) if existing_videos else 0
 
-for i in range(num_videos):
+        # Record the Videos
+        self.record(selected_gesture, latest_video, num_videos)
 
-    webcam = 6
-    # Preparazione della cattura video
-    video_name = str(latest_video + i + 1) + video_format
-    video_path = os.path.join(gesture_video_path, video_name)
-    capture = cv2.VideoCapture(webcam)
-    frame_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = 30
-    out = cv2.VideoWriter(video_path, cv2.VideoWriter_fourcc(*"MJPG"), fps, (frame_width, frame_height))
-    print("Video number | {}".format(i+ 1))
-    # Registrazione del video
-    start_time = time.time()
-    frame_count = 0
-    while int(time.time() - start_time) < int(video_duration):
-        ret, frame = capture.read()
-        cv2.imshow(gesture_type_to_add, cv2.flip(frame, 1))
-        cv2.waitKey(1)
-        if ret:
-            out.write(frame)
-        else:
-            break
-        frame_count += 1
-    capture.release()
-    out.release()
-    cv2.destroyAllWindows()
-    print("Video Frames: {} and video duration {}".format(frame_count, video_duration))
-    # Pausa tra i video
-    time.sleep(pause)
+    def countdown(self, num_of_secs:int):
 
-print("End videos")
+        """ Countdown Function """
 
+        print("\nAcquisition Starts in:")
 
+        # Wait Until 0 Seconds Remaining
+        while (not rospy.is_shutdown() and num_of_secs != 0):
+
+            # Print the Remaining Time
+            print('{:02d}:{:02d}'.format(*divmod(num_of_secs, 60)))
+
+            # Wait 1 Second
+            rospy.sleep(1)
+            num_of_secs -= 1
+
+        print("\nSTART\n")
+
+    def record(self, gesture:str, latest_video:int, num_videos:int):
+
+        """ Record Videos """
+
+        print(f'Recording Gesture: "{gesture}"')
+        self.countdown(3)
+
+        # Record the Videos
+        for i in range(num_videos):
+
+            # Prepare Video Path - Video Number + Video Format
+            video_path = os.path.join(os.path.join(self.video_path, gesture), str(latest_video + i + 1) + self.video_format)
+
+            # Prepare Video Capture
+            capture, fps = cv2.VideoCapture(self.webcam_number), 30
+            frame_width, frame_height = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)), int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            out = cv2.VideoWriter(video_path, cv2.VideoWriter_fourcc(*"MJPG"), fps, (frame_width, frame_height))
+            print(f'Video Number | {i+1}')
+
+            # Record the Video
+            start_time, frame_count = time.time(), 0
+
+            while int(time.time() - start_time) < int(self.video_duration):
+
+                # Read the Frame
+                ret, frame = capture.read()
+
+                # Show the Frame and Wait
+                cv2.imshow(gesture, cv2.flip(frame, 1))
+                cv2.waitKey(1)
+
+                # Write the Frame
+                if ret: out.write(frame); frame_count += 1
+                else: break
+
+            # Release Video Capture and Writer
+            capture.release(); out.release()
+            cv2.destroyAllWindows()
+
+            print(f'Video Frames: {frame_count} and Video Duration {self.video_duration}')
+
+            # Pause Between Videos
+            time.sleep(self.pause)
+
+        # End Recording
+        print(f'End Recording Videos for Gesture: "{gesture}"')
+
+if __name__ == '__main__':
+
+    # Initialize the Video Recorder
+    VideoRecorder()
