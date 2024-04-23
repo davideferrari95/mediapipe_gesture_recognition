@@ -112,6 +112,7 @@ install(PROGRAMS
     # Dataset Utilities
     scripts/dataset_utilities/process_dataset_node.py
     scripts/dataset_utilities/video_register.py
+    scripts/dataset_utilities/utilities/flip_zoom_dataset.py
     scripts/dataset_utilities/utilities/zero_padding.py
 
     # Raw Functions
