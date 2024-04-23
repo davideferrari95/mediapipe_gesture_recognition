@@ -113,7 +113,6 @@ install(PROGRAMS
     scripts/dataset_utilities/process_dataset_node.py
     scripts/dataset_utilities/video_register.py
     scripts/dataset_utilities/utilities/flip_zoom_dataset.py
-    scripts/dataset_utilities/utilities/zero_padding.py
 
     # Raw Functions
     scripts/raw_function/3Dpoint_node_area.py

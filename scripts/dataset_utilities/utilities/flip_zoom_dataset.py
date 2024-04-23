@@ -98,4 +98,4 @@ class FlipZoomDataset:
 if __name__ == '__main__':
 
     # Create Flip and Zoom Dataset Class
-    FlipZoomDataset = FlipZoomDataset()
+    FlipZoomDataset()

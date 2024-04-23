@@ -4,9 +4,14 @@ import os, cv2, pickle
 import rospy, rospkg
 import numpy as np
 from termcolor import colored
+from natsort import natsorted
 
+# Import Mediapipe
 import mediapipe
 from mediapipe_gesture_recognition.msg import Keypoint, Hand, Pose, Face
+
+# Import Zero Padding Class
+from utilities.zero_padding import ZeroPadding
 
 class MediapipeDatasetProcess:
 
@@ -49,7 +54,7 @@ class MediapipeDatasetProcess:
 
         # Get Package Path - Get Dataset Folder
         self.package_path    = rospkg.RosPack().get_path('mediapipe_gesture_recognition')
-        self.DATASET_PATH    = os.path.join(self.package_path, r'dataset/Video')
+        self.DATASET_PATH    = os.path.join(self.package_path, r'dataset/Gestures')
         self.gesture_path    = os.path.join(self.package_path, r'data/3D_Gestures', self.gesture_enabled_folder)
         self.checkpoint_file = os.path.join(self.gesture_path, 'Video Checkpoint.txt')
 
@@ -264,10 +269,11 @@ class MediapipeDatasetProcess:
 
             # Load the Last Gesture Name
             last_gesture = str(lines[0].split(",")[0])
-            last_video = str(lines[0].split(",")[1]) + ".mp4"
+            last_video = str(lines[0].split(",")[1])
+            # last_video = str(lines[0].split(",")[1]) + ".avi"
 
-        if last_gesture == '': print(colored('\nStarting Dataset Processing\n\n', 'green'))
-        else: print(colored('\nResuming Dataset Processing', 'green'), f'from Gesture: {last_gesture:10} | Video: {last_video}\n\n')
+        if last_gesture == '': print(colored('\nStarting Dataset Processing\n', 'green'))
+        else: print(colored('\nResuming Dataset Processing', 'green'), f' | Gesture: {last_gesture} | Video: {last_video}\n')
 
         try:
 
@@ -278,10 +284,10 @@ class MediapipeDatasetProcess:
                 if folder >= last_gesture:
 
                     # Read Every Video in the Gesture Folder
-                    for video in sorted(os.listdir(os.path.join(self.DATASET_PATH, folder))):
+                    for video in natsorted(os.listdir(os.path.join(self.DATASET_PATH, folder))):
 
                         # Ignore Already Processed Videos
-                        if video > last_video:
+                        if video.split(".")[0] >= last_video:
 
                             # Get the Full Path of the Video for Each Gesture
                             video_path = os.path.join(self.DATASET_PATH, folder, video)
@@ -297,24 +303,29 @@ class MediapipeDatasetProcess:
                             # Process the Video
                             video_sequence = np.array(self.processVideo(video_path))
 
-                            if self.debug: print("Folder: ", self.gesture_name, "| Video: ", self.video_number)
-                            if self.debug: print(f'Video Sequence Shape: {video_sequence.shape}')
-
                             # Save the Processed Video
                             self.saveProcessedVideo(self.gesture_name, video_sequence)
 
                             # Print Finish of the Video
-                            print(f'Video: {video:10} | "{folder}" | Processed and Saved')
+                            print(f'Folder: {self.gesture_name:10} | Video: {video:8} | Sequence Shape: {video_sequence.shape} | Processed and Saved')
 
                         # Traceback - Update Checkpoint
                         with open(self.checkpoint_file, 'w') as f:
                             f.write(str(folder)+ "," + str(os.path.splitext(video)[0]))
 
-                # Reset Last Video (Otherwise also Next Gesture Folder starts from `last_video`)
-                last_video = ''
+                    # Reset Last Video (Otherwise also Next Gesture Folder starts from `last_video`)
+                    last_video = ''
 
             # Print Finish of All Videos
-            print('All Video Processed')
+            print('\nAll Video Processed and Saved\n')
+
+            # Remove Video Checkpoint File
+            os.remove(self.checkpoint_file)
+
+            # Zero Padding - Create Zero-Padded Sequences
+            print(colored('Zero Padding the Sequences\n', 'green'))
+            ZeroPadding(self.gesture_path, overwrite=False)
+            print(colored('Zero Padding Completed\n', 'green'))
 
         # Ctrl+C -> Stop the Video Flow
         except KeyboardInterrupt:
