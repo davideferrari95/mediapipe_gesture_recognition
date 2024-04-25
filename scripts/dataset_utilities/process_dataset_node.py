@@ -344,7 +344,7 @@ class MediapipeDatasetProcess:
                     print(colored(f'\nGesture: "{self.gesture_name}"', 'green'), ' | All Video Processed and Saved\n')
 
                     # Reset Last Video (Otherwise also Next Gesture Folder starts from `last_video`)
-                    last_video = ''
+                    last_video = 0
 
             # Print Finish of All Videos
             print('\nAll Video Processed and Saved\n')
