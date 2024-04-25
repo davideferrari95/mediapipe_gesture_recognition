@@ -42,10 +42,18 @@ class ZeroPadding:
 
     @staticmethod
     @njit
-    def zero_padding(array, max_shape, keypoint_number:int=300):
+    def post_padding(array, max_shape, keypoint_number:int=300):
 
         padded_sequence = np.zeros((int(max_shape), keypoint_number))
         padded_sequence[:array.shape[0], :array.shape[-1]] = array
+        return padded_sequence
+
+    @staticmethod
+    @njit
+    def pre_padding(array, max_shape, keypoint_number:int=300):
+
+        padded_sequence = np.zeros((int(max_shape), keypoint_number))
+        padded_sequence[max_shape - array.shape[0]:, :array.shape[-1]] = array
         return padded_sequence
 
     def zeroPadding(self, keypoint_number:int=300, overwrite:bool=False):
@@ -65,7 +73,7 @@ class ZeroPadding:
                 # Loop Over the Sequence
                 for i in range(len(sequence)):
 
-                    padded_sequence = self.zero_padding(sequence[i], self.max_frames, keypoint_number)
+                    padded_sequence = self.pre_padding(sequence[i], self.max_frames, keypoint_number)
                     video_sequence[i] = padded_sequence
 
                     print(f'Processing: {gesture} | Shape: {video_sequence.shape}')
