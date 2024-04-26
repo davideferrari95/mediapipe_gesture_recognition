@@ -4,34 +4,49 @@
 
 ## Dataset Creation
 
-### Convert Frames into Videos
+### Record Gesture Videos Dataset
 
-- Run `dataset_converter.py`:
+- Run `video_recorder.py`:
 
-        rosrun mediapipe_gesture_recognition Pro_converter.py
+        python ../scripts/dataset_utilities video_recorder.py
 
-  - `root_path` = your Gesture_frames folder
-  - `video_with_labels_path` = your video folder
-  - `data_file` = your .csv label total file path
+  - Edit the `GESTURES` List to Add New Selectable Gestures.
+  - Edit `video_duration`, `pause`, `video_format` to Change Recording Parameters.
 
-### Get Keypoints using MediaPipe API
+### Convert Video Dataset in Keypoints using MediaPipe API
 
 - Launch `process_dataset_node.py`:
 
         roslaunch mediapipe_gesture_recognition process_dataset_node.launch
 
+  - `enable_right_hand`, `enable_left_hand`, `enable_pose`, `enable_face` to Enable/Disable Keypoints.
+  - Apply `zero pre-padding` to Pad Keypoints to the Same Length.
+
 ## Train Neural Network
 
 - Run `training_node.py`:
 
-        python ../training_node.py
+        python ../scripts/training_node.py
+
+  - Edit `config/config.yaml` to Change Training Parameters.
 
 ## Start Gesture Recognition
 
 - Launch `stream_node.py`:
 
-        roslaunch mediapipe_gesture_recognition stream_node.launch realsense:=True
+        roslaunch mediapipe_gesture_recognition stream_node.launch
+
+  - `enable_right_hand`, `enable_left_hand`, `enable_pose`, `enable_face` to Enable/Disable Keypoints.
+  - `enable_face_detection` to Enable/Disable Face Detection.
+  - `face_mesh_mode` to Change Face Mesh Mode.
+  - `enable_objectron` to Enable/Disable Objectron.
+  - `objectron_model` to Change Objectron Model.
+  - `webcam` to Change Webcam Source.
+  - `realsense` to Enable/Disable Intel RealSense.
 
 - Launch `recognition_node.py`:
 
         roslaunch mediapipe_gesture_recognition recognition_node.launch
+
+  - `recognition_precision_probability` to Change Recognition Precision Probability.
+  - `realsense` to Enable/Disable Intel RealSense.
