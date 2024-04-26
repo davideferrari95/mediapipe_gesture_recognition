@@ -319,7 +319,7 @@ class GestureRecognitionTraining3D:
         if cfg.enable_left_hand:  gesture_file += 'Left';  self.keypoint_number += 84
         if cfg.enable_pose:       gesture_file += 'Pose';  self.keypoint_number += 132
         if cfg.enable_face:       gesture_file += 'Face';  self.keypoint_number += 1912
-        print(colored(f'\n\nLoading: {gesture_file} Configuration\n', 'yellow'), f' | Keypoint Number: {self.keypoint_number}')
+        print(colored(f'\n\nLoading: {gesture_file} Configuration', 'yellow'), f' | Keypoint Number: {self.keypoint_number}\n')
 
         # Get Database and Model Path
         database_path   = os.path.join(FOLDER, f'data/3D_Gestures/{gesture_file}')
@@ -410,7 +410,7 @@ class GestureRecognitionTraining3D:
                 gesture_sequences = sequence if 'gesture_sequences' not in locals() else np.concatenate((gesture_sequences, sequence), axis=0)
 
                 # Debug Print | Shape: (Number of Sequences / Videos, Sequence Length, Number of Keypoints (Flattened Array of 3D Coordinates x,y,z,v))
-                print(f'Processing: "{gesture}"'.ljust(30), f'| Sequence Shape: {sequence.shape}'.ljust(30), f'| Label: {labels[-1]} | Gesture: "{gesture_name}"')
+                print(f'Processing: "{gesture}"'.ljust(31), f'| Sequence Shape: {sequence.shape}'.ljust(30), f'| Label: {labels[-1]} | Gesture: "{gesture_name}"')
 
         print(colored(f'\nTotal Sequences Shape: ', 'yellow'), f'{gesture_sequences.shape} | ', colored('Total Labels Shape: ', 'yellow'), f'{labels.shape}\n\n')
         return gesture_sequences, labels
