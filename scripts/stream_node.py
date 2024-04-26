@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-import rospy
-import cv2
+import rospy, cv2
 import numpy as np
 from termcolor import colored
+from typing import Optional
 
 # Import MediaPipe
 from mediapipe.python.solutions import drawing_utils, drawing_styles, holistic, face_detection, objectron
@@ -31,6 +31,19 @@ VGA WebCam: VGA WebCam (usb-0000:00:14.0-5):
 '''
 
 class MediapipeStreaming:
+
+    """ Mediapipe Holistic
+
+        Returns:
+        A NamedTuple with fields describing the landmarks on the most prominent person detected:
+            1) "pose_landmarks" field that contains the pose landmarks.
+            2) "pose_world_landmarks" field that contains the pose landmarks in real-world 3D coordinates that are in meters with the origin at the center between hips.
+            3) "left_hand_landmarks" field that contains the left-hand landmarks.
+            4) "right_hand_landmarks" field that contains the right-hand landmarks.
+            5) "face_landmarks" field that contains the face landmarks.
+            6) "segmentation_mask" field that contains the segmentation mask if "enable_segmentation" is set to true.
+
+    """
 
     # Constants
     RIGHT_HAND, LEFT_HAND = True, False
@@ -155,11 +168,8 @@ class MediapipeStreaming:
         """ Initialize MediaPipe Solutions """
 
         # Initialize MediaPipe:
-        self.mp_drawing        = drawing_utils
-        self.mp_drawing_styles = drawing_styles
-        self.mp_holistic       = holistic
-        self.mp_face_detection = face_detection
-        self.mp_objectron      = objectron
+        self.mp_drawing, self.mp_drawing_styles = drawing_utils, drawing_styles
+        self.mp_holistic, self.mp_face_detection, self.mp_objectron = holistic, face_detection, objectron
 
         # Read Holistic Parameters
         static_image_mode        = rospy.get_param('/holistic/static_image_mode', False)
@@ -203,7 +213,7 @@ class MediapipeStreaming:
             self.objectron = self.mp_objectron.Objectron(static_image_mode, max_num_objects, min_detection_confidence, min_tracking_confidence,
                                                          self.objectron_model, focal_length, principal_point, None if image_size=='None' else image_size)
 
-    def newKeypoint(self, landmark:NormalizedLandmark, number:int, name:str):
+    def newKeypoint(self, landmark:NormalizedLandmark, number:int, name:str) -> Keypoint:
 
         """ New Keypoint Creation Function """
 
@@ -234,7 +244,7 @@ class MediapipeStreaming:
 
         return new_keypoint
 
-    def processHand(self, RightLeft:bool, handResults:HolisticResults, image:np.ndarray):
+    def processHand(self, RightLeft:bool, handResults:HolisticResults, image:cv2.typing.MatLike) -> Optional[Hand]:
 
         """ Process Hand Keypoints """
 
@@ -265,7 +275,7 @@ class MediapipeStreaming:
             # Publish Hand Keypoint Message
             self.hand_right_pub.publish(hand_msg) if RightLeft else self.hand_left_pub.publish(hand_msg)
 
-    def processPose(self, poseResults:HolisticResults, image:np.ndarray):
+    def processPose(self, poseResults:HolisticResults, image:cv2.typing.MatLike) -> Optional[Pose]:
 
         """ Process Pose Keypoints """
 
@@ -293,7 +303,7 @@ class MediapipeStreaming:
             # Publish Pose Keypoint Message
             self.pose_pub.publish(pose_msg)
 
-    def processFace(self, faceResults:HolisticResults, image:np.ndarray):
+    def processFace(self, faceResults:HolisticResults, image:cv2.typing.MatLike) -> Optional[Face]:
 
         """ Process Face Keypoints """
 

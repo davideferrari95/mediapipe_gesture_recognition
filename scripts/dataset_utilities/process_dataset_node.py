@@ -6,10 +6,12 @@ import numpy as np
 from termcolor import colored
 from natsort import natsorted
 from tqdm import tqdm
+from typing import List, Optional
 
 # Import Mediapipe
-import mediapipe
+from mediapipe.python.solutions import holistic, drawing_styles, drawing_utils
 from mediapipe_gesture_recognition.msg import Keypoint, Hand, Pose, Face
+from utils.mediapipe_types import HolisticResults, Landmark
 
 # Import Zero Padding Class
 from utilities.zero_padding import ZeroPadding
@@ -33,6 +35,19 @@ class MediapipeDatasetProcess:
         Left  Hand: 21 * 4  = 84
         Pose:       33 * 4  = 132
         Face:       478 * 4 = 1912
+
+    """
+
+    """ Mediapipe Holistic
+
+        Returns:
+        A NamedTuple with fields describing the landmarks on the most prominent person detected:
+            1) "pose_landmarks" field that contains the pose landmarks.
+            2) "pose_world_landmarks" field that contains the pose landmarks in real-world 3D coordinates that are in meters with the origin at the center between hips.
+            3) "left_hand_landmarks" field that contains the left-hand landmarks.
+            4) "right_hand_landmarks" field that contains the right-hand landmarks.
+            5) "face_landmarks" field that contains the face landmarks.
+            6) "segmentation_mask" field that contains the segmentation mask if "enable_segmentation" is set to true.
 
     """
 
@@ -93,16 +108,16 @@ class MediapipeDatasetProcess:
         print(colored(f'  Skeleton:   {self.enable_pose}',        'green' if self.enable_pose else 'red'))
         print(colored(f'  Face Mesh:  {self.enable_face}\n',      'green' if self.enable_face else 'red'))
 
-        # Initialize Mediapipe:
-        self.mp_drawing        = mediapipe.solutions.drawing_utils
-        self.mp_drawing_styles = mediapipe.solutions.drawing_styles
-        self.mp_holistic       = mediapipe.solutions.holistic
+
+        # Initialize Mediapipe
+        self.mp_drawing, self.mp_drawing_styles = drawing_utils, drawing_styles
+        self.mp_holistic = holistic
 
         # Initialize Mediapipe Holistic
         self.holistic = self.mp_holistic.Holistic(refine_face_landmarks=True, min_detection_confidence=0.5, min_tracking_confidence=0.5)
         time.sleep(1)
 
-    def newKeypoint(self, landmark, number, name):
+    def newKeypoint(self, landmark:Landmark, number:int, name:str) -> Keypoint:
 
         ''' New Keypoint Creation Utility Function '''
 
@@ -119,7 +134,7 @@ class MediapipeDatasetProcess:
 
         return new_keypoint
 
-    def processHand(self, RightLeft, handResults, image):
+    def processHand(self, RightLeft:bool, handResults:HolisticResults, image:cv2.typing.MatLike) -> Optional[Hand]:
 
         ''' Process Hand Keypoints '''
 
@@ -149,7 +164,7 @@ class MediapipeDatasetProcess:
             # Return Hand Keypoint Message
             return hand_msg
 
-    def processPose(self, poseResults, image):
+    def processPose(self, poseResults:HolisticResults, image:cv2.typing.MatLike) -> Optional[Pose]:
 
         ''' Process Pose Keypoints '''
 
@@ -176,7 +191,7 @@ class MediapipeDatasetProcess:
             # Return Pose Keypoint Message
             return pose_msg
 
-    def processFace(self, faceResults, image):
+    def processFace(self, faceResults:HolisticResults, image:cv2.typing.MatLike) -> Optional[Face]:
 
         ''' Process Face Keypoints '''
 
@@ -217,7 +232,7 @@ class MediapipeDatasetProcess:
             # Return Face Message
             return face_msg
 
-    def flattenKeypoints(self, pose_msg, left_msg, right_msg, face_msg):
+    def flattenKeypoints(self, pose_msg:Pose, left_msg:Hand, right_msg:Hand, face_msg:Face) -> np.ndarray:
 
         '''
         Flatten Incoming Messages or Create zeros Vector \n
@@ -233,7 +248,7 @@ class MediapipeDatasetProcess:
         # Concatenate Data
         return np.concatenate([right_h, left_h, pose, face])
 
-    def processResults(self, image):
+    def processResults(self, image:cv2.typing.MatLike) -> np.ndarray:
 
         ''' Process the Image to Obtain a Flattened Keypoint Sequence of the Frame '''
 
@@ -258,7 +273,7 @@ class MediapipeDatasetProcess:
         # Return the Flattened Keypoints Sequence
         return sequence
 
-    def saveProcessedVideo(self, gesture, keypoints_sequence):
+    def saveProcessedVideo(self, gesture:str, keypoints_sequence:np.ndarray):
 
         ''' Data Save Functions in a Common Gesture .pkl File'''
 
@@ -269,7 +284,7 @@ class MediapipeDatasetProcess:
         if os.path.exists(gesture_savefile):
 
             # Load the File
-            load_file = pickle.load(open(gesture_savefile, 'rb'))
+            load_file:List[np.ndarray] = pickle.load(open(gesture_savefile, 'rb'))
 
             # Append the New Keypoints Sequence
             load_file.append(keypoints_sequence)
@@ -365,7 +380,7 @@ class MediapipeDatasetProcess:
             with open(self.checkpoint_file, 'w') as f:
                 f.write(str(folder)+ "," + str(os.path.splitext(video)[0]))
 
-    def processVideo(self, video_path):
+    def processVideo(self, video_path:str) -> List[np.ndarray]:
 
         ''' Function to Process a Video with Mediapipe '''
 

@@ -16,7 +16,7 @@ class ZeroPadding:
         # Zero-Padding
         self.zeroPadding(keypoint_number, overwrite)
 
-    def get_max_frames(self):
+    def get_max_frames(self) -> int:
 
         """ Find the max video frame number to make the zero-padding """
 
@@ -42,7 +42,7 @@ class ZeroPadding:
 
     @staticmethod
     @njit
-    def post_padding(array, max_shape, keypoint_number:int=300):
+    def post_padding(array, max_shape:int, keypoint_number:int=300) -> np.ndarray:
 
         padded_sequence = np.zeros((int(max_shape), keypoint_number))
         padded_sequence[:array.shape[0], :array.shape[-1]] = array
@@ -50,7 +50,7 @@ class ZeroPadding:
 
     @staticmethod
     @njit
-    def pre_padding(array, max_shape, keypoint_number:int=300):
+    def pre_padding(array, max_shape:int, keypoint_number:int=300) -> np.ndarray:
 
         padded_sequence = np.zeros((int(max_shape), keypoint_number))
         padded_sequence[max_shape - array.shape[0]:, :array.shape[-1]] = array

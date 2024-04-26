@@ -26,7 +26,7 @@ def set_hydra_absolute_path():
     with open(hydra_config_file, 'w') as file:
         ruamel_yaml.dump(yaml_data, file)
 
-def save_parameters(path, file_name, **kwargs):
+def save_parameters(path, file_name:str, **kwargs):
 
     """ Save Parameters Function """
 
@@ -36,7 +36,7 @@ def save_parameters(path, file_name, **kwargs):
     with open(os.path.join(path, file_name), 'w') as file:
         yaml.dump(kwargs, file, sort_keys=False)
 
-def load_parameters(file_name) -> dict:
+def load_parameters(file_name:str) -> dict:
 
     """ Load Parameters Function """
 
