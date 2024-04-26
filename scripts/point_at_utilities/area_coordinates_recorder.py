@@ -4,9 +4,9 @@ import rospy, csv, numpy as np
 from typing import List, Tuple
 from mediapipe_gesture_recognition.msg import Hand, Pose
 
-class CoordinateRegister:
+class CoordinateRecorder:
 
-    """ Coordinate Register Class for Point-At Gesture """
+    """ Coordinate Recorder Class for Point-At Gesture """
 
     def __init__(self):
 
@@ -147,8 +147,8 @@ class CoordinateRegister:
 
 if __name__ == '__main__':
 
-    # Coordinate Register Initialization
-    CR = CoordinateRegister()
+    # Coordinate Recorder Initialization
+    CR = CoordinateRecorder()
 
     # Countdown
     CR.countdown(3)

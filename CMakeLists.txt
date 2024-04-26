@@ -108,10 +108,9 @@ install(PROGRAMS
     scripts/dataset_utilities/process_dataset_node.py
     scripts/dataset_utilities/jester_dataset/dataset_converter.py
 
-    # Raw Functions
-    scripts/raw_function/3Dpoint_node_area.py
-    # scripts/raw_function/point_node.py
-    # scripts/raw_function/take_orientation.py
+    # Point-At Utilities
+    scripts/point_at_utilities/point_area_node.py
+    scripts/point_at_utilities/area_coordinates_recorder.py
 
     DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}
 )
