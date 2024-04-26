@@ -4,6 +4,20 @@ from termcolor import colored
 # Package Path
 PACKAGE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),"../.."))
 
+# Available Gestures
+GESTURES = [
+    'Stop',
+    'No Gesture',
+    'Point at',
+    'Thumb Up',
+    'Move Forward',
+    'Move Right',
+    'Move Left',
+    'Move Backward',
+    'Resume',
+    'Pause'
+]
+
 class VideoRecorder:
 
     """ Video Recorder Class - Dataset Videos """
@@ -22,12 +36,9 @@ class VideoRecorder:
         # Number of Videos to Record
         num_videos = int(input('\nInsert the number of videos you want to record: '))
 
-        # Available Gestures List
-        gestures = ['Stop', 'No Gesture', 'Point at', 'Thumb Up', 'Move Forward', 'Move Right', 'Move Left', 'Move Backward', 'Resume', 'Pause']
-
         # Print Available Gestures
         print(colored('\nAvailable Gestures:\n', 'green'))
-        for i, gesture in enumerate(gestures, start=1):
+        for i, gesture in enumerate(GESTURES, start=1):
             print(f'{i}. {gesture}')
 
         # Ask for the Gesture to Record
@@ -39,7 +50,7 @@ class VideoRecorder:
                 selected_index = int(input('\nInsert the number of the gesture to record: '))
 
                 # Check if the Selected Index is Valid
-                if 1 <= selected_index <= len(gestures): selected_gesture = gestures[selected_index - 1]; break
+                if 1 <= selected_index <= len(GESTURES): selected_gesture = GESTURES[selected_index - 1]; break
                 else: print('Insert a valid number corresponding to a gesture in the list.')
 
             except ValueError: print('Insert a valid number.')
