@@ -84,7 +84,7 @@ class GestureRecognition3D:
         except FileNotFoundError: print(colored(f'ERROR: Model {gesture_file} Not Available\n\n', 'red')); exit(0)
 
         # Load the Names of the Saved Actions
-        self.actions = np.sort(np.array([os.path.splitext(f)[0] for f in os.listdir(f'{package_path}/database/{gesture_file}/Gestures')]))
+        self.actions = np.sort(np.array([os.path.splitext(f)[0] for f in os.listdir(f'{package_path}/data/3D_Gestures/{gesture_file}')]))
         for index, action in enumerate(self.actions): self.available_gestures[str(action)] = index
         print(colored(f'Available Gestures: {self.available_gestures}\n\n', 'green'))
 
