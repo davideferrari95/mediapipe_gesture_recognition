@@ -3,44 +3,44 @@
 
 <package format="3">
 
-  <name>mediapipe_gesture_recognition</name>
-  <version>0.0.0</version>
-  <description>The Mediapipe Gesture Recognition Package</description>
+    <name>mediapipe_gesture_recognition</name>
+    <version>0.0.0</version>
+    <description>The Mediapipe Gesture Recognition Package</description>
 
-  <!-- Maintainer, Author, License -->
-  <maintainer email="davide.ferrari95@unimore.it">Davide Ferrari</maintainer>
-  <author email="davide.ferrari95@unimore.it">Davide Ferrari</author>
-  <license>BSD-3</license>
+    <!-- Maintainer, Author, License -->
+    <maintainer email="davide.ferrari95@unimore.it">Davide Ferrari</maintainer>
+    <author email="davide.ferrari95@unimore.it">Davide Ferrari</author>
+    <license>BSD-3</license>
 
-  <!-- Build Dependancies -->
-  <buildtool_depend>ament_cmake</buildtool_depend>
-  <buildtool_depend>ament_cmake_python</buildtool_depend>
+    <!-- Build Dependancies -->
+    <buildtool_depend>ament_cmake</buildtool_depend>
+    <buildtool_depend>ament_cmake_python</buildtool_depend>
 
-  <!-- ROS Dependancies -->
-  <depend>rclpy</depend>
+    <!-- ROS Dependancies -->
+    <depend>rclpy</depend>
 
-  <!-- LaunchFiles Dependancies -->
-  <exec_depend>ros2launch</exec_depend>
+    <!-- LaunchFiles Dependancies -->
+    <exec_depend>ros2launch</exec_depend>
 
-  <!-- Custom Message Creation Dependancies -->
-  <buildtool_depend>rosidl_default_generators</buildtool_depend>
-  <exec_depend>rosidl_default_runtime</exec_depend>
-  <member_of_group>rosidl_interface_packages</member_of_group>
+    <!-- Custom Message Creation Dependancies -->
+    <buildtool_depend>rosidl_default_generators</buildtool_depend>
+    <exec_depend>rosidl_default_runtime</exec_depend>
+    <member_of_group>rosidl_interface_packages</member_of_group>
 
-  <!-- Message Dependancies -->
-  <depend>std_msgs</depend>
-  <depend>sensor_msgs</depend>
+    <!-- Message Dependancies -->
+    <depend>std_msgs</depend>
+    <depend>sensor_msgs</depend>
 
     <!-- Other Dependancies -->
-  <depend>cv_bridge</depend>
-  <depend>image_transport</depend>
+    <depend>cv_bridge</depend>
+    <depend>image_transport</depend>
 
-  <!-- Test Dependancies -->
-  <test_depend>ament_lint_auto</test_depend>
-  <test_depend>ament_lint_common</test_depend>
+    <!-- Test Dependancies -->
+    <test_depend>ament_lint_auto</test_depend>
+    <test_depend>ament_lint_common</test_depend>
 
-  <export>
-    <build_type>ament_cmake</build_type>
-  </export>
+    <export>
+        <build_type>ament_cmake</build_type>
+    </export>
 
 </package>

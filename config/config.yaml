@@ -5,13 +5,13 @@ enable_pose: true
 enable_face: false
 
 # Training Parameters
-min_epochs: 100
-max_epochs: 2000
+min_epochs: 30
+max_epochs: 500
 min_delta: 0.01
-patience: 150
-batch_size: 64
-optimizer: Adam
-learning_rate: 5e-4
+patience: 20
+batch_size: 128
+optimizer: AdamW
+learning_rate: 1e-4
 loss_function: cross_entropy
 train_set_size: 0.8
 validation_set_size: 0.1
@@ -25,5 +25,5 @@ fast_dev_run: false
 
 hydra:
   run:
-    dir: /home/davide/ROS/ICRA_2023/src/Mediapipe/mediapipe_gesture_recognition -
-      ICRA/data/outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    dir: 
+      /home/davide/ROS/ros_2_ws/src/Mediapipe/mediapipe_gesture_recognition/data/outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
