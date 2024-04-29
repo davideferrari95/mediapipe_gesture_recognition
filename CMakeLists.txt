@@ -97,7 +97,7 @@ include_directories(
 ## Install ##
 #############
 
-install(PROGRAMS 
+install(PROGRAMS
 
     # Stream, Recognition, and Training Nodes
     scripts/stream_node.py

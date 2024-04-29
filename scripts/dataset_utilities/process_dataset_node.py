@@ -3,9 +3,9 @@
 import os, time, cv2, pickle
 import rospy, rospkg
 import numpy as np
-from termcolor import colored
-from natsort import natsorted
 from tqdm import tqdm
+from natsort import natsorted
+from termcolor import colored
 from typing import List, Optional
 
 # Import Mediapipe
@@ -107,7 +107,6 @@ class MediapipeDatasetProcess:
         print(colored(f'  Left  Hand: {self.enable_left_hand}\n', 'green' if self.enable_left_hand  else 'red'))
         print(colored(f'  Skeleton:   {self.enable_pose}',        'green' if self.enable_pose else 'red'))
         print(colored(f'  Face Mesh:  {self.enable_face}\n',      'green' if self.enable_face else 'red'))
-
 
         # Initialize Mediapipe
         self.mp_drawing, self.mp_drawing_styles = drawing_utils, drawing_styles

@@ -38,7 +38,7 @@ with open(f'{CSV_PATH}/Total.csv', 'r') as f: dataset = {int(number):label for n
 for subfolder_name in sorted(os.listdir(DATASET_PATH)):
 
     if os.path.isdir(os.path.join(DATASET_PATH, subfolder_name)):
-       
+
         # Take the Label of Every Subfolder, using the Subfolder Number
         subfolder_label = dataset[int(subfolder_name)]
 
@@ -51,14 +51,14 @@ for subfolder_name in sorted(os.listdir(DATASET_PATH)):
         # Define Input - Output Paths
         input_path  = os.path.join(DATASET_PATH, subfolder_name)
         output_path = os.path.join(subfolder_path, subfolder_name + ".mp4")
-       
+
         # Debug Print
         print(f'Subfolder: {int(subfolder_name):6}   |   Label: {subfolder_label}')
         # print(f'Input Path: {input_path} | Output Path: {output_path}')
 
         # Create VideoWriter Object
         out = cv2.VideoWriter(output_path, codec, len(os.listdir(input_path))/3, (176*2,100*2))
-   
+
         # Iterate Through the Images in the Subfolder
         for filename in sorted(os.listdir(input_path)):
 
