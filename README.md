@@ -1,36 +1,71 @@
-# Mediapipe Gesture Recognition
+# MediaPipe Gesture Recognition
 
-Gesture Recognition with Google MediaPipe
+3D Gesture Recognition with Google MediaPipe in ROS2 - Foxy
 
-## Setup and Usage
+## Dependencies
 
-### Convert Frames into Videos
+- ROS2 Foxy+
+- MediaPipe
 
-- run mediapipe_gesture_recognition/useful_scripts/Pro_converter.py setting:
+## Installation
 
-        root_path = your Gesture_frames folder
-        video_with_labels_path = your video folder 
-        data_file = your csv label total file path 
+- Clone the GitHub Repository in the ROS Workspace:
 
-In your terminal:
+      git clone -b foxy https://github.com/davideferrari95/mediapipe_gesture_recognition
 
-    ros2 run mediapipe_gesture_recognition Pro_converter.py
+- Install the Required Dependencies:
 
-### Get all Keypoints using MediaPipe API
+      rosdep install -i --from-paths src --rosdistro foxy -y
 
-- launch the video launch file with:
+- Install the Python Dependencies:
 
-        ros2 launch mediapipe_gesture_recognition video_node_launch.py
+      pip install -r requirements.txt
 
+## Dataset Creation
 
-### Train Neural Network
+### Record Gesture Videos Dataset
 
-- Run PyTorch Training Node:
+- Run `video_recorder.py`:
 
-        ros2 run mediapipe_gesture_recognition pytorch_videotraining_node.py
+      python ../scripts/dataset_utilities video_recorder.py
 
-### Use Trained Model to Recognize Gestures in Real Time
+  - Edit the `GESTURES` List to Add New Selectable Gestures.
+  - Edit `video_duration`, `pause`, `video_format` to Change Recording Parameters.
 
-- Run PyTorch model:
+### Convert Video Dataset in Keypoints using MediaPipe API
 
-        ros2 run mediapipe_gesture_recognition pytorch_recognition_node.py
+- Launch `process_dataset_node.py`:
+
+      ros2 launch mediapipe_gesture_recognition process_dataset_node.launch
+
+  - `enable_right_hand`, `enable_left_hand`, `enable_pose`, `enable_face` to Enable/Disable Keypoints.
+  - Apply `zero pre-padding` to Pad Keypoints to the Same Length.
+
+## Train Neural Network
+
+- Run `training_node.py`:
+
+      python ../scripts/training_node.py
+
+  - Edit `config/config.yaml` to Change Training Parameters.
+
+## Start Gesture Recognition
+
+- Launch `stream_node.py`:
+
+      ros2 launch mediapipe_gesture_recognition stream_node.launch
+
+  - `enable_right_hand`, `enable_left_hand`, `enable_pose`, `enable_face` to Enable/Disable Keypoints.
+  - `enable_face_detection` to Enable/Disable Face Detection.
+  - `face_mesh_mode` to Change Face Mesh Mode.
+  - `enable_objectron` to Enable/Disable Objectron.
+  - `objectron_model` to Change Objectron Model.
+  - `webcam` to Change Webcam Source.
+  - `realsense` to Enable/Disable Intel RealSense.
+
+- Launch `recognition_node.py`:
+
+      ros2 launch mediapipe_gesture_recognition recognition_node.launch
+
+  - `recognition_precision_probability` to Change Recognition Precision Probability.
+  - `realsense` to Enable/Disable Intel RealSense.
