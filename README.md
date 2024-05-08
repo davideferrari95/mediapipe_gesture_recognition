@@ -1,6 +1,6 @@
-# mediapipe_gesture_recognition
+# MediaPipe Gesture Recognition
 
-3D Gesture Recognition with Google MediaPipe
+3D Gesture Recognition with Google MediaPipe in ROS1 - Noetic
 
 ## Dependencies
 
